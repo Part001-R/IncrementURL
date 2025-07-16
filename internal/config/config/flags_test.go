@@ -11,17 +11,17 @@ func Test_ParseFlags_SUCCESS(t *testing.T) {
 
 	testData := []struct {
 		testName string
-		arg_cmd  string
-		arg_a    string
-		arg_b    string
+		argCmd   string
+		argA     string
+		argB     string
 		wantAddr string
 		wantBase string
 	}{
 		{
 			testName: "correct data",
-			arg_cmd:  "cmd",
-			arg_a:    "-a=localhost:9999",
-			arg_b:    "-b=http://localhost:5500/",
+			argCmd:   "cmd",
+			argA:     "-a=localhost:9999",
+			argB:     "-b=http://localhost:5500/",
 			wantAddr: "localhost:9999",
 			wantBase: "http://localhost:5500/",
 		},
@@ -30,7 +30,7 @@ func Test_ParseFlags_SUCCESS(t *testing.T) {
 	for _, tt := range testData {
 		t.Run(tt.testName, func(t *testing.T) {
 
-			os.Args = []string{tt.arg_cmd, tt.arg_a, tt.arg_b}
+			os.Args = []string{tt.argCmd, tt.argA, tt.argB}
 			ParseFlags()
 
 			assert.Equalf(t, tt.wantAddr, Flags.FlagServerAddr, "ожидалось {%s}, а принято {%s}", tt.wantAddr, Flags.FlagServerAddr)
@@ -44,16 +44,16 @@ func Test_ParseFlags_FAULT_1(t *testing.T) {
 
 	testData := []struct {
 		testName  string
-		arg_cmd   string
-		arg_a     string
-		arg_b     string
+		argCmd    string
+		argA      string
+		argB      string
 		wantError string
 	}{
 		{
 			testName:  "wrong name arg_a",
-			arg_cmd:   "cmd",
-			arg_a:     "-c=localhost:9999",
-			arg_b:     "-b=http://localhost:5500/",
+			argCmd:    "cmd",
+			argA:      "-c=localhost:9999",
+			argB:      "-b=http://localhost:5500/",
 			wantError: "нет поддержки принятого флага {-c}",
 		},
 	}
@@ -61,7 +61,7 @@ func Test_ParseFlags_FAULT_1(t *testing.T) {
 	for _, tt := range testData {
 		t.Run(tt.testName, func(t *testing.T) {
 
-			os.Args = []string{tt.arg_cmd, tt.arg_a, tt.arg_b}
+			os.Args = []string{tt.argCmd, tt.argA, tt.argB}
 
 			err := ParseFlags()
 			assert.Equalf(t, tt.wantError, err.Error(), "ожидалось {%s}, а принято {%s}", tt.wantError, err.Error())
@@ -74,16 +74,16 @@ func Test_ParseFlags_FAULT_2(t *testing.T) {
 
 	testData := []struct {
 		testName  string
-		arg_cmd   string
-		arg_a     string
-		arg_b     string
+		argCmd    string
+		argA      string
+		argB      string
 		wantError string
 	}{
 		{
 			testName:  "wrong name arg_a",
-			arg_cmd:   "cmd",
-			arg_a:     "-a=localhost:9999",
-			arg_b:     "-b=http://localhost:5500/",
+			argCmd:    "cmd",
+			argA:      "-a=localhost:9999",
+			argB:      "-b=http://localhost:5500/",
 			wantError: "количество аргументов командной строки больше двух",
 		},
 	}
@@ -91,7 +91,7 @@ func Test_ParseFlags_FAULT_2(t *testing.T) {
 	for _, tt := range testData {
 		t.Run(tt.testName, func(t *testing.T) {
 
-			os.Args = []string{tt.arg_cmd, tt.arg_a, tt.arg_b, tt.arg_b}
+			os.Args = []string{tt.argCmd, tt.argA, tt.argB, tt.argB}
 
 			err := ParseFlags()
 			assert.Equalf(t, tt.wantError, err.Error(), "ожидалось {%s}, а принято {%s}", tt.wantError, err.Error())

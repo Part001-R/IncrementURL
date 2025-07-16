@@ -49,6 +49,8 @@ func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.ShortURLFromLong(res, req)
+			body := io.NopCloser(res.Body)
+			defer body.Close()
 
 			bodyResp, err := io.ReadAll(res.Body)
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа:{%v}", err)
@@ -101,6 +103,9 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.ShortURLFromLong(res, req)
+			body := io.NopCloser(res.Body)
+			defer body.Close()
+
 			statusCodeRx := res.Result().StatusCode
 			assert.Equalf(t, tt.wantStatusCode, statusCodeRx, "ожидалcя код {%d}, а принят {%d}", tt.wantStatusCode, statusCodeRx)
 		})
@@ -139,6 +144,8 @@ func Test_LongURLFromShort_SUCCESS(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.LongURLFromShort(res, req)
+			body := io.NopCloser(res.Body)
+			defer body.Close()
 
 			dataRx, err := io.ReadAll(res.Body)
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
@@ -186,6 +193,9 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.LongURLFromShort(res, req)
+			body := io.NopCloser(res.Body)
+			defer body.Close()
+
 			statusCodeRx := res.Result().StatusCode
 
 			assert.Equalf(t, tt.wantStatusCode, statusCodeRx, "ожидался код {%d} а принят {%d}", tt.wantStatusCode, statusCodeRx)
@@ -222,9 +232,11 @@ func Test_DataMetricByTypeAndName_SUCCESS(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.DataMetricByTypeAndName(res, req)
+
 			require.Equalf(t, tt.wantStatusCode, res.Result().StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, res.Result().StatusCode)
 
 			body, err := io.ReadAll(res.Body)
+
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
 			assert.Equalf(t, tt.wantBody, string(body), "принято{%s} а ожидалось {%s}", tt.wantBody, string(body))
 		})
@@ -277,6 +289,9 @@ func Test_DataMetricByTypeAndName_FAULT(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.DataMetricByTypeAndName(res, req)
+			body := io.NopCloser(res.Body)
+			defer body.Close()
+
 			assert.Equalf(t, tt.wantStatusCode, res.Result().StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, res.Result().StatusCode)
 		})
 	}

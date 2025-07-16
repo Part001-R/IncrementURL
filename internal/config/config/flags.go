@@ -24,19 +24,19 @@ func ParseFlags() error {
 		return errors.New("количество аргументов командной строки больше двух")
 	}
 
-	name_FlagServerAddr := "a"
-	name_FlagBaseAddrShortURL := "b"
+	nameFlagServerAddr := "a"
+	nameFlagBaseAddrShortURL := "b"
 
 	for _, v := range slArg {
 		rxFlag := v[:2]
 		fl := strings.TrimPrefix(rxFlag, "-")
-		if fl != name_FlagServerAddr && fl != name_FlagBaseAddrShortURL {
+		if fl != nameFlagServerAddr && fl != nameFlagBaseAddrShortURL {
 			return fmt.Errorf("нет поддержки принятого флага {%s}", rxFlag)
 		}
 	}
 
-	flag.StringVar(&Flags.FlagServerAddr, name_FlagServerAddr, ":8080", "address and port to run server")
-	flag.StringVar(&Flags.FlagBaseAddrShortURL, name_FlagBaseAddrShortURL, ":8080/", "base address short URL")
+	flag.StringVar(&Flags.FlagServerAddr, nameFlagServerAddr, ":8080", "address and port to run server")
+	flag.StringVar(&Flags.FlagBaseAddrShortURL, nameFlagBaseAddrShortURL, ":8080/", "base address short URL")
 	flag.Parse()
 
 	return nil
