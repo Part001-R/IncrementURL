@@ -17,11 +17,11 @@ var (
 	Flags = FlagsT{}
 )
 
-func ParseFlags() error {
+func ParseFlags() (string, string, error) {
 
 	slArg := os.Args[1:]
 	if len(slArg) > 2 {
-		return errors.New("количество аргументов командной строки больше двух")
+		return "", "", errors.New("количество аргументов командной строки больше двух")
 	}
 
 	nameFlagServerAddr := "a"
@@ -31,7 +31,7 @@ func ParseFlags() error {
 		rxFlag := v[:2]
 		fl := strings.TrimPrefix(rxFlag, "-")
 		if fl != nameFlagServerAddr && fl != nameFlagBaseAddrShortURL {
-			return fmt.Errorf("нет поддержки принятого флага {%s}", rxFlag)
+			return "", "", fmt.Errorf("нет поддержки принятого флага {%s}", rxFlag)
 		}
 	}
 
@@ -39,5 +39,5 @@ func ParseFlags() error {
 	flag.StringVar(&Flags.FlagBaseAddrShortURL, nameFlagBaseAddrShortURL, ":8080/", "base address short URL")
 	flag.Parse()
 
-	return nil
+	return Flags.FlagBaseAddrShortURL, Flags.FlagServerAddr, nil
 }

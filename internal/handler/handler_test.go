@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,62 +16,41 @@ import (
 
 func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 
-	testMetrics := service.NewMetrics()
-
-	metricsHandler := &MetricsHandler{
-		Metrics:          testMetrics,
-		BaseAddrShortURL: "http://localhost:8080/",
+	shortLong := service.NewShortByLong(":8080")
+	shortLongHandler := &ShortLongT{
+		List: shortLong,
 	}
+	uLong := "https://practicum.yandex.ru/"
+	bodyReq := bytes.NewBuffer([]byte(uLong))
 
-	testData := []struct {
-		nameT          string
-		urlT           string
-		methodReqT     string
-		bodyT          string
-		wantStatusCode int
-		wantResultT    string
-	}{
-		{
-			nameT:          "correct data",
-			urlT:           "http://localhost:8080/",
-			methodReqT:     http.MethodPost,
-			bodyT:          "https://practicum.yandex.ru/",
-			wantStatusCode: http.StatusCreated,
-			wantResultT:    "http://localhost:8080/EwHXdJfB",
-		},
-	}
+	req := httptest.NewRequest(http.MethodPost, uLong, bodyReq)
+	res := httptest.NewRecorder()
 
-	for _, tt := range testData {
-		t.Run(tt.nameT, func(t *testing.T) {
+	shortLongHandler.ShortURLFromLong(res, req)
 
-			bodyReq := bytes.NewBuffer([]byte(tt.bodyT))
+	resp := res.Result()
+	defer func() {
+		err := resp.Body.Close()
+		assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+	}()
+	bodyResp, err := io.ReadAll(resp.Body)
+	require.NoErrorf(t, err, "ошибка при чтении тела ответа:{%v}", err)
 
-			req := httptest.NewRequest(tt.methodReqT, tt.urlT, bodyReq)
-			res := httptest.NewRecorder()
+	assert.Equalf(t, http.StatusCreated, resp.StatusCode, "ожидался код {%d}, а принят {%d}", http.StatusCreated, resp.StatusCode)
 
-			metricsHandler.ShortURLFromLong(res, req)
+	strRx := strings.Trim(string(bodyResp), "\"")
+	_ = strRx
+	strWant := fmt.Sprintf("http://localhost/%s", shortLongHandler.List.ListShorByLong[uLong])
 
-			resp := res.Result()
-			defer func() {
-				err := resp.Body.Close()
-				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
-			}()
-			bodyResp, err := io.ReadAll(resp.Body)
-			require.NoErrorf(t, err, "ошибка при чтении тела ответа:{%v}", err)
-
-			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
-
-			strRx := strings.Trim(string(bodyResp), "\"")
-			assert.Equalf(t, tt.wantResultT, strRx, "тело ответа {%s} не соответствует ожиданию {%s}", strRx, tt.wantResultT)
-		})
-	}
+	assert.Equalf(t, strWant, strRx, "ожидалось {%s} а принято {%s}", strWant, strRx)
 }
 
 func Test_ShortURLFromLong_FAULT(t *testing.T) {
-	testMetrics := service.NewMetrics()
 
-	metricsHandler := &MetricsHandler{
-		Metrics: testMetrics,
+	shortLong := &ShortLongT{
+		List:             &service.ShortByLong{},
+		BaseAddrShortURL: "http://localhost:8080/",
+		ServerAddr:       "http://localhost:8080",
 	}
 
 	testData := []struct {
@@ -87,13 +67,6 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 			bodyT:          "https://practicum.yandex.ru/",
 			wantStatusCode: http.StatusBadRequest,
 		},
-		{
-			nameT:          "wrong url",
-			urlT:           "http://localhost:8080/",
-			methodReqT:     http.MethodPost,
-			bodyT:          "https://practicum.google.ru/",
-			wantStatusCode: http.StatusBadRequest,
-		},
 	}
 
 	for _, tt := range testData {
@@ -104,7 +77,7 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 			req := httptest.NewRequest(tt.methodReqT, tt.urlT, bodyReq)
 			res := httptest.NewRecorder()
 
-			metricsHandler.ShortURLFromLong(res, req)
+			shortLong.ShortURLFromLong(res, req)
 
 			resp := res.Result()
 			defer func() {
@@ -119,58 +92,40 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 
 func Test_LongURLFromShort_SUCCESS(t *testing.T) {
 
-	testMetrics := service.NewMetrics()
-
-	metricsHandler := &MetricsHandler{
-		Metrics: testMetrics,
+	shortLong := service.NewShortByLong(":8080")
+	shortLongHandler := &ShortLongT{
+		List: shortLong,
 	}
 
-	testData := []struct {
-		nameT          string
-		urlT           string
-		methodReqT     string
-		wantStatusCode int
-		wantResultT    string
-	}{
-		{
-			nameT:          "correct data",
-			urlT:           "http://localhost:8080/EwHXdJfB",
-			methodReqT:     http.MethodGet,
-			wantStatusCode: http.StatusTemporaryRedirect,
-			wantResultT:    "Location: https://practicum.yandex.ru/",
-		},
-	}
+	uLong := "https://practicum.yandex.ru/"
+	code := generateCode(6)
+	shortLongHandler.List.ListShorByLong[uLong] = code
 
-	for _, tt := range testData {
-		t.Run(tt.nameT, func(t *testing.T) {
+	urlReq := "http://localhost" + shortLongHandler.BaseAddrShortURL + "/" + code
 
-			req := httptest.NewRequest(tt.methodReqT, tt.urlT, nil)
-			res := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, urlReq, nil)
+	res := httptest.NewRecorder()
 
-			metricsHandler.LongURLFromShort(res, req)
-			body := io.NopCloser(res.Body)
-			defer body.Close()
+	shortLongHandler.LongURLFromShort(res, req)
+	resp := res.Result()
+	defer func() {
+		err := resp.Body.Close()
+		assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+	}()
 
-			dataRx, err := io.ReadAll(res.Body)
-			resp := res.Result()
-			defer func() {
-				err := resp.Body.Close()
-				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
-			}()
-			require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
-			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался {%d}, а принято {%d}", tt.wantStatusCode, resp.StatusCode)
+	rxHead := resp.Header.Get("Location")
 
-			strRx := string(dataRx)
-			assert.Equalf(t, tt.wantResultT, strRx, "ожидалось {%s}, а принято {%s}", tt.wantResultT, strRx)
-		})
-	}
+	require.Equalf(t, http.StatusTemporaryRedirect, resp.StatusCode, "ожидался код {%d}, а принят {%d}", http.StatusTemporaryRedirect, resp.StatusCode)
+	assert.Equalf(t, uLong, rxHead, "ожидался {%d}, а принято {%d}", uLong, rxHead)
+
 }
 
 func Test_LongURLFromShort_FAULT(t *testing.T) {
-	testMetrics := service.NewMetrics()
 
-	metricsHandler := &MetricsHandler{
-		Metrics: testMetrics,
+	shortLong := &ShortLongT{
+		List:             &service.ShortByLong{},
+		BaseAddrShortURL: "http://localhost:8080/",
+		ServerAddr:       "http://localhost:8080",
 	}
 
 	testData := []struct {
@@ -199,7 +154,7 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 			req := httptest.NewRequest(tt.methodReqT, tt.urlT, nil)
 			res := httptest.NewRecorder()
 
-			metricsHandler.LongURLFromShort(res, req)
+			shortLong.LongURLFromShort(res, req)
 
 			resp := res.Result()
 			defer func() {
@@ -217,7 +172,7 @@ func Test_DataMetricByTypeAndName_SUCCESS(t *testing.T) {
 
 	testMetrics.CounterMetrics["PollCount"] = 123
 
-	metricsHandler := &MetricsHandler{
+	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,
 	}
 	testsData := []struct {
@@ -261,7 +216,7 @@ func Test_DataMetricByTypeAndName_FAULT(t *testing.T) {
 
 	testMetrics.CounterMetrics["PollCount"] = 123
 
-	metricsHandler := &MetricsHandler{
+	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,
 	}
 	testsData := []struct {
@@ -322,7 +277,7 @@ func TestAllMetricsHTML_SUCCESS(t *testing.T) {
 	testMetrics.GaugeMetrics["Alloc"] = 123.45
 	testMetrics.GaugeMetrics["RandomValue"] = 987.65
 
-	metricsHandler := &MetricsHandler{
+	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,
 	}
 
@@ -366,7 +321,7 @@ func TestAllMetricsHTML_FAULT(t *testing.T) {
 
 	testMetrics := service.NewMetrics()
 
-	metricsHandler := &MetricsHandler{
+	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,
 	}
 

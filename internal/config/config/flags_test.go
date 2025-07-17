@@ -63,7 +63,7 @@ func Test_ParseFlags_FAULT_1(t *testing.T) {
 
 			os.Args = []string{tt.argCmd, tt.argA, tt.argB}
 
-			err := ParseFlags()
+			_, _, err := ParseFlags()
 			assert.Equalf(t, tt.wantError, err.Error(), "ожидалось {%s}, а принято {%s}", tt.wantError, err.Error())
 		})
 	}
@@ -93,7 +93,7 @@ func Test_ParseFlags_FAULT_2(t *testing.T) {
 
 			os.Args = []string{tt.argCmd, tt.argA, tt.argB, tt.argB}
 
-			err := ParseFlags()
+			_, _, err := ParseFlags()
 			assert.Equalf(t, tt.wantError, err.Error(), "ожидалось {%s}, а принято {%s}", tt.wantError, err.Error())
 		})
 	}
