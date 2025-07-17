@@ -49,14 +49,16 @@ func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.ShortURLFromLong(res, req)
-			body := io.NopCloser(res.Body)
-			defer body.Close()
 
-			bodyResp, err := io.ReadAll(res.Body)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
+			bodyResp, err := io.ReadAll(resp.Body)
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа:{%v}", err)
 
-			statusCodeRx := res.Result().StatusCode
-			assert.Equalf(t, tt.wantStatusCode, statusCodeRx, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, statusCodeRx)
+			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 
 			strRx := strings.Trim(string(bodyResp), "\"")
 			assert.Equalf(t, tt.wantResultT, strRx, "тело ответа {%s} не соответствует ожиданию {%s}", strRx, tt.wantResultT)
@@ -103,14 +105,16 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.ShortURLFromLong(res, req)
-			body := io.NopCloser(res.Body)
-			defer body.Close()
 
-			statusCodeRx := res.Result().StatusCode
-			assert.Equalf(t, tt.wantStatusCode, statusCodeRx, "ожидалcя код {%d}, а принят {%d}", tt.wantStatusCode, statusCodeRx)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
+
+			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидалcя код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 		})
 	}
-
 }
 
 func Test_LongURLFromShort_SUCCESS(t *testing.T) {
@@ -148,10 +152,13 @@ func Test_LongURLFromShort_SUCCESS(t *testing.T) {
 			defer body.Close()
 
 			dataRx, err := io.ReadAll(res.Body)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
-
-			statusCodeRx := res.Result().StatusCode
-			require.Equalf(t, tt.wantStatusCode, statusCodeRx, "ожидался {%d}, а принято {%d}", tt.wantStatusCode, statusCodeRx)
+			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался {%d}, а принято {%d}", tt.wantStatusCode, resp.StatusCode)
 
 			strRx := string(dataRx)
 			assert.Equalf(t, tt.wantResultT, strRx, "ожидалось {%s}, а принято {%s}", tt.wantResultT, strRx)
@@ -193,12 +200,14 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.LongURLFromShort(res, req)
-			body := io.NopCloser(res.Body)
-			defer body.Close()
 
-			statusCodeRx := res.Result().StatusCode
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
 
-			assert.Equalf(t, tt.wantStatusCode, statusCodeRx, "ожидался код {%d} а принят {%d}", tt.wantStatusCode, statusCodeRx)
+			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d} а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 		})
 	}
 }
@@ -232,11 +241,15 @@ func Test_DataMetricByTypeAndName_SUCCESS(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.DataMetricByTypeAndName(res, req)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
 
-			require.Equalf(t, tt.wantStatusCode, res.Result().StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, res.Result().StatusCode)
+			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 
-			body, err := io.ReadAll(res.Body)
-
+			body, err := io.ReadAll(resp.Body)
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
 			assert.Equalf(t, tt.wantBody, string(body), "принято{%s} а ожидалось {%s}", tt.wantBody, string(body))
 		})
@@ -289,10 +302,13 @@ func Test_DataMetricByTypeAndName_FAULT(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.DataMetricByTypeAndName(res, req)
-			body := io.NopCloser(res.Body)
-			defer body.Close()
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
 
-			assert.Equalf(t, tt.wantStatusCode, res.Result().StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, res.Result().StatusCode)
+			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 		})
 	}
 }
@@ -314,13 +330,19 @@ func TestAllMetricsHTML_SUCCESS(t *testing.T) {
 	res := httptest.NewRecorder()
 
 	metricsHandler.AllMetricsHTML(res, req)
-	require.Equalf(t, http.StatusOK, res.Code, "ожидался код ответа {%d}, а принят {%d}", http.StatusOK, res.Code)
+	resp := res.Result()
+	defer func() {
+		err := resp.Body.Close()
+		assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+	}()
+
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "ожидался код ответа {%d}, а принят {%d}", http.StatusOK, resp.StatusCode)
 
 	expectedContentType := "text/html; charset=utf-8"
 	contentTypeRx := res.Header().Get("Content-Type")
 	require.Equalf(t, expectedContentType, contentTypeRx, "ожидается контент {%s}, а принят {%s}", expectedContentType, contentTypeRx)
 
-	body, err := io.ReadAll(res.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
 
 	responseBody := string(body)
@@ -368,8 +390,13 @@ func TestAllMetricsHTML_FAULT(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			metricsHandler.AllMetricsHTML(res, req)
-			assert.Equalf(t, tt.wantStatusCode, res.Code, "ожидался код ответа {%d}, а принят {%d}", tt.wantStatusCode, res.Code)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
 
+			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код ответа {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 		})
 	}
 }

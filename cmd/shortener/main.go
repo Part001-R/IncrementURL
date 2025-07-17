@@ -39,6 +39,6 @@ func run() error {
 	cr.Get("/value/{type}/{name}", metricsHandler.DataMetricByTypeAndName)
 	cr.Get("/", metricsHandler.AllMetricsHTML)
 
-	fmt.Printf("Запуск сервера на порту:%s\n", config.Flags.FlagServerAddr)
+	fmt.Printf("Запуск сервера %s\n", config.Flags.FlagServerAddr)
 	return http.ListenAndServe(config.Flags.FlagServerAddr, cr)
 }
