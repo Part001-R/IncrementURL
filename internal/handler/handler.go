@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -14,8 +15,7 @@ import (
 )
 
 type MetricsHandlerT struct {
-	Metrics          *service.Metrics
-	BaseAddrShortURL string
+	Metrics *service.Metrics
 }
 
 type ShortLongT struct {
@@ -50,12 +50,10 @@ func (sl *ShortLongT) ShortURLFromLong(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trmURL := strings.Trim(string(rxData), "\"")
-
 	short := generateCode(8)
-	sl.List.ListShorByLong[trmURL] = short
+	sl.List.ListShorByLong[string(rxData)] = short
 
-	strResult := "http://localhost/" + sl.BaseAddrShortURL + short
+	strResult := "http://localhost" + sl.BaseAddrShortURL + short
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(strResult))
@@ -97,40 +95,54 @@ func (sl *ShortLongT) LongURLFromShort(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func (m *MetricsHandlerT) DataMetricByTypeAndName(w http.ResponseWriter, r *http.Request) {
+func (m *MetricsHandlerT) UpdateMetricByTypeAndName(w http.ResponseWriter, r *http.Request) {
 
 	m.Metrics.Mu.Lock()
 	defer m.Metrics.Mu.Unlock()
 
-	w.Header().Set("Content-Type", "text/plain")
-
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
 	rxData := r.URL.Path[1:]
 	slRxData := strings.Split(rxData, "/")
-	if len(slRxData) != 3 {
+	if len(slRxData) != 4 {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 	typeMetric := slRxData[1] // gauge, counter
 	nameMetric := slRxData[2]
+	valueMetric := slRxData[3]
 
-	if typeMetric != "counter" {
+	if len(nameMetric) == 0 {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 
-	v, ok := m.Metrics.CounterMetrics[nameMetric]
-	if !ok {
+	switch typeMetric {
+	case "counter":
+		v, err := strconv.ParseInt(valueMetric, 10, 64)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		m.Metrics.CounterMetrics[nameMetric] += v
+
+	case "gauge":
+		v, err := strconv.ParseFloat(valueMetric, 64)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		m.Metrics.GaugeMetrics[nameMetric] = v
+
+	default:
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("%d", v)))
 }
 
 func (m *MetricsHandlerT) AllMetricsHTML(w http.ResponseWriter, r *http.Request) {
@@ -170,6 +182,49 @@ func (m *MetricsHandlerT) AllMetricsHTML(w http.ResponseWriter, r *http.Request)
 	}
 	fmt.Fprintln(w, "</ul>")
 	fmt.Fprintln(w, "</body></html>")
+}
+
+func (m *MetricsHandlerT) ValueMetricByTypeAndName(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "text/plain")
+
+	if r.Method != http.MethodGet {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	rxData := r.URL.Path[1:]
+	slRxData := strings.Split(rxData, "/")
+	metricType := slRxData[1]
+	metricName := slRxData[2]
+
+	val := ""
+
+	switch metricType {
+	case "counter":
+		v, ok := m.Metrics.CounterMetrics[metricName]
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		val = fmt.Sprintf("%d", v)
+
+	case "gauge":
+		v, ok := m.Metrics.GaugeMetrics[metricName]
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		val = fmt.Sprintf("%f", v)
+
+	default:
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(val))
 }
 
 // Генерация случайных символов заданной длинны

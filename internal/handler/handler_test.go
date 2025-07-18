@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/Part001-R/IncrementURL/internal/service"
@@ -16,33 +15,48 @@ import (
 
 func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 
-	shortLong := service.NewShortByLong(":8080")
+	shortLong := service.NewShortByLong("http://localhost:8080/")
 	shortLongHandler := &ShortLongT{
 		List: shortLong,
 	}
-	uLong := "https://practicum.yandex.ru/"
-	bodyReq := bytes.NewBuffer([]byte(uLong))
 
-	req := httptest.NewRequest(http.MethodPost, uLong, bodyReq)
-	res := httptest.NewRecorder()
+	testData := []struct {
+		nameT          string
+		urlT           string
+		methodReqT     string
+		bodyT          string
+		wantStatusCode int
+	}{
+		{
+			nameT:          "correct data",
+			urlT:           "http://localhost:8080",
+			methodReqT:     http.MethodPost,
+			bodyT:          "https://practicum.yandex.ru/",
+			wantStatusCode: http.StatusCreated,
+		},
+	}
 
-	shortLongHandler.ShortURLFromLong(res, req)
+	for _, tt := range testData {
+		t.Run(tt.nameT, func(t *testing.T) {
 
-	resp := res.Result()
-	defer func() {
-		err := resp.Body.Close()
-		assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
-	}()
-	bodyResp, err := io.ReadAll(resp.Body)
-	require.NoErrorf(t, err, "ошибка при чтении тела ответа:{%v}", err)
+			bodyReq := bytes.NewBuffer([]byte(tt.bodyT))
 
-	assert.Equalf(t, http.StatusCreated, resp.StatusCode, "ожидался код {%d}, а принят {%d}", http.StatusCreated, resp.StatusCode)
+			req := httptest.NewRequest(tt.methodReqT, tt.urlT, bodyReq)
+			res := httptest.NewRecorder()
+			shortLongHandler.ShortURLFromLong(res, req)
 
-	strRx := strings.Trim(string(bodyResp), "\"")
-	_ = strRx
-	strWant := fmt.Sprintf("http://localhost/%s", shortLongHandler.List.ListShorByLong[uLong])
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка закрытия потока {%v}", err)
+			}()
 
-	assert.Equalf(t, strWant, strRx, "ожидалось {%s} а принято {%s}", strWant, strRx)
+			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
+
+			_, ok := shortLongHandler.List.ListShorByLong[tt.bodyT]
+			assert.Equalf(t, ok, true, "нет признака существования ключа в мане")
+		})
+	}
 }
 
 func Test_ShortURLFromLong_FAULT(t *testing.T) {
@@ -101,8 +115,7 @@ func Test_LongURLFromShort_SUCCESS(t *testing.T) {
 	code := generateCode(6)
 	shortLongHandler.List.ListShorByLong[uLong] = code
 
-	urlReq := "http://localhost" + shortLongHandler.BaseAddrShortURL + "/" + code
-
+	urlReq := fmt.Sprintf("http://localhost:8080/%s", code)
 	req := httptest.NewRequest(http.MethodGet, urlReq, nil)
 	res := httptest.NewRecorder()
 
@@ -167,7 +180,92 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 	}
 }
 
-func Test_DataMetricByTypeAndName_SUCCESS(t *testing.T) {
+func Test_UpdateMetricByTypeAndName_SUCCESS(t *testing.T) {
+	testMetrics := service.NewMetrics()
+
+	metricsHandler := &MetricsHandlerT{
+		Metrics: testMetrics,
+	}
+	testsData := []struct {
+		nameT          string
+		methodT        string
+		urlT           string
+		wantStatusCode int
+	}{
+		{
+			nameT:          "correct data",
+			methodT:        http.MethodPost,
+			urlT:           "http://localhost:8080/update/counter/PollCount/222",
+			wantStatusCode: http.StatusOK,
+		},
+	}
+	for _, tt := range testsData {
+		t.Run(tt.nameT, func(t *testing.T) {
+			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
+			res := httptest.NewRecorder()
+
+			metricsHandler.UpdateMetricByTypeAndName(res, req)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
+
+			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
+		})
+	}
+}
+
+func Test_UpdateMetricByTypeAndName_FAULT(t *testing.T) {
+	testMetrics := service.NewMetrics()
+
+	metricsHandler := &MetricsHandlerT{
+		Metrics: testMetrics,
+	}
+	testsData := []struct {
+		nameT          string
+		methodT        string
+		urlT           string
+		wantStatusCode int
+		wantBody       string
+	}{
+		{
+			nameT:          "wrong metric type",
+			methodT:        http.MethodPost,
+			urlT:           "http://localhost:8080/update/wrong/PollCount/1",
+			wantStatusCode: http.StatusNotFound,
+		},
+		{
+			nameT:          "wrong URL",
+			methodT:        http.MethodPost,
+			urlT:           "http://localhost:8080/update/counter//1",
+			wantStatusCode: http.StatusNotFound,
+		},
+		{
+			nameT:          "wrong method",
+			methodT:        http.MethodGet,
+			urlT:           "http://localhost:8080/update/gauge/PollCount/1",
+			wantStatusCode: http.StatusBadRequest,
+		},
+	}
+	for _, tt := range testsData {
+		t.Run(tt.nameT, func(t *testing.T) {
+			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
+			res := httptest.NewRecorder()
+
+			metricsHandler.UpdateMetricByTypeAndName(res, req)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
+
+			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
+		})
+	}
+}
+
+func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
 	testMetrics := service.NewMetrics()
 
 	testMetrics.CounterMetrics["PollCount"] = 123
@@ -195,7 +293,7 @@ func Test_DataMetricByTypeAndName_SUCCESS(t *testing.T) {
 			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
 			res := httptest.NewRecorder()
 
-			metricsHandler.DataMetricByTypeAndName(res, req)
+			metricsHandler.ValueMetricByTypeAndName(res, req)
 			resp := res.Result()
 			defer func() {
 				err := resp.Body.Close()
@@ -207,63 +305,6 @@ func Test_DataMetricByTypeAndName_SUCCESS(t *testing.T) {
 			body, err := io.ReadAll(resp.Body)
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
 			assert.Equalf(t, tt.wantBody, string(body), "принято{%s} а ожидалось {%s}", tt.wantBody, string(body))
-		})
-	}
-}
-
-func Test_DataMetricByTypeAndName_FAULT(t *testing.T) {
-	testMetrics := service.NewMetrics()
-
-	testMetrics.CounterMetrics["PollCount"] = 123
-
-	metricsHandler := &MetricsHandlerT{
-		Metrics: testMetrics,
-	}
-	testsData := []struct {
-		nameT          string
-		methodT        string
-		urlT           string
-		wantStatusCode int
-		wantBody       string
-	}{
-		{
-			nameT:          "wrong metric type",
-			methodT:        http.MethodGet,
-			urlT:           "http://localhost:8080/value/wrong/PollCount",
-			wantStatusCode: http.StatusNotFound,
-		},
-		{
-			nameT:          "wrong metric name",
-			methodT:        http.MethodGet,
-			urlT:           "http://localhost:8080/value/counter/wrong",
-			wantStatusCode: http.StatusNotFound,
-		},
-		{
-			nameT:          "wrong URL",
-			methodT:        http.MethodGet,
-			urlT:           "http://localhost:8080/value/counter",
-			wantStatusCode: http.StatusBadRequest,
-		},
-		{
-			nameT:          "wrong method",
-			methodT:        http.MethodPost,
-			urlT:           "http://localhost:8080/value/counter",
-			wantStatusCode: http.StatusBadRequest,
-		},
-	}
-	for _, tt := range testsData {
-		t.Run(tt.nameT, func(t *testing.T) {
-			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
-			res := httptest.NewRecorder()
-
-			metricsHandler.DataMetricByTypeAndName(res, req)
-			resp := res.Result()
-			defer func() {
-				err := resp.Body.Close()
-				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
-			}()
-
-			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 		})
 	}
 }
