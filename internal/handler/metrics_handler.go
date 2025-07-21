@@ -1,15 +1,11 @@
 package handler
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/Part001-R/IncrementURL/internal/service"
 )
@@ -18,87 +14,10 @@ type MetricsHandlerT struct {
 	Metrics *service.Metrics
 }
 
-type ShortLongT struct {
-	List             *service.ShortByLong
-	BaseAddrShortURL string
-	ServerAddr       string
-	mu               sync.Mutex
-}
-
-func (sl *ShortLongT) ShortURLFromLong(w http.ResponseWriter, r *http.Request) {
-
-	sl.mu.Lock()
-	defer sl.mu.Unlock()
-
-	w.Header().Set("Content-Type", "text/plain")
-
-	if r.Method != http.MethodPost {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	rxData, err := io.ReadAll(r.Body)
-	defer func() {
-		_ = r.Body.Close()
-	}()
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	if len(rxData) == 0 {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	short := generateCode(8)
-	sl.List.ListShorByLong[string(rxData)] = short
-
-	strResult := "http://localhost" + sl.BaseAddrShortURL + short
-
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(strResult))
-
-}
-
-func (sl *ShortLongT) LongURLFromShort(w http.ResponseWriter, r *http.Request) {
-
-	sl.mu.Lock()
-	defer sl.mu.Unlock()
-
-	w.Header().Set("Content-Type", "text/plain")
-
-	if r.Method != http.MethodGet {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	rxData := r.URL.Path[1:]
-	if len(rxData) == 0 {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	short := string(rxData)
-	long := ""
-
-	for k, v := range sl.List.ListShorByLong {
-		if v == short {
-			long = k
-		}
-	}
-	if long == "" {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Location", long)
-	w.WriteHeader(http.StatusTemporaryRedirect)
-}
-
 func (m *MetricsHandlerT) UpdateMetricByTypeAndName(w http.ResponseWriter, r *http.Request) {
 
-	m.Metrics.Mu.Lock()
-	defer m.Metrics.Mu.Unlock()
+	m.Metrics.Mu.RLock()
+	defer m.Metrics.Mu.RUnlock()
 
 	if r.Method != http.MethodPost {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -146,8 +65,8 @@ func (m *MetricsHandlerT) UpdateMetricByTypeAndName(w http.ResponseWriter, r *ht
 }
 
 func (m *MetricsHandlerT) AllMetricsHTML(w http.ResponseWriter, r *http.Request) {
-	m.Metrics.Mu.Lock()
-	defer m.Metrics.Mu.Unlock()
+	m.Metrics.Mu.RLock()
+	defer m.Metrics.Mu.RUnlock()
 
 	if r.Method != http.MethodGet {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -185,6 +104,9 @@ func (m *MetricsHandlerT) AllMetricsHTML(w http.ResponseWriter, r *http.Request)
 }
 
 func (m *MetricsHandlerT) ValueMetricByTypeAndName(w http.ResponseWriter, r *http.Request) {
+
+	m.Metrics.Mu.RLock()
+	defer m.Metrics.Mu.RUnlock()
 
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -225,11 +147,4 @@ func (m *MetricsHandlerT) ValueMetricByTypeAndName(w http.ResponseWriter, r *htt
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(val))
-}
-
-// Генерация случайных символов заданной длинны
-func generateCode(n int) string {
-	b := make([]byte, n)
-	io.ReadFull(rand.Reader, b)
-	return base64.URLEncoding.EncodeToString(b)[:n]
 }

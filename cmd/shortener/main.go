@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/Part001-R/IncrementURL/internal/config/config"
@@ -13,14 +14,14 @@ import (
 func main() {
 
 	if err := run(); err != nil {
-		panic(err)
+		log.Fatalf("работа прервана по причине: {%v}", err)
 	}
 }
 
 func run() error {
 	baseAddrShortURL, serverAddr, err := config.ParseFlags()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("ошибка чтения флагов: {%w}", err)
 	}
 
 	metrics := service.NewMetrics()
@@ -28,7 +29,7 @@ func run() error {
 		Metrics: metrics,
 	}
 
-	shortLong := service.NewShortByLong(baseAddrShortURL)
+	shortLong := service.NewShortLongURL(baseAddrShortURL)
 	shortLongHandler := &handler.ShortLongT{
 		List:             shortLong,
 		BaseAddrShortURL: baseAddrShortURL,
@@ -43,5 +44,6 @@ func run() error {
 	cr.Get("/value/{type}/{name}", metricsHandler.ValueMetricByTypeAndName)
 
 	fmt.Printf("Запуск сервера %s\n", config.Flags.FlagServerAddr)
-	return http.ListenAndServe(config.Flags.FlagServerAddr, cr)
+	err = http.ListenAndServe(config.Flags.FlagServerAddr, cr)
+	return fmt.Errorf("ошибка http сервера: {%w}", err)
 }

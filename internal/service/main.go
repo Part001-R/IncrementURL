@@ -7,12 +7,13 @@ import (
 type Metrics struct {
 	GaugeMetrics   map[string]float64
 	CounterMetrics map[string]int64
-	Mu             sync.Mutex
+	Mu             sync.RWMutex
 }
 
-type ShortByLong struct {
+type ShortLongURL struct {
 	BaseAddrShortURL string
-	ListShorByLong   map[string]string
+	ShorByLong       map[string]string
+	LongByShort      map[string]string
 }
 
 func NewMetrics() *Metrics {
@@ -22,9 +23,10 @@ func NewMetrics() *Metrics {
 	}
 }
 
-func NewShortByLong(baseURL string) *ShortByLong {
-	return &ShortByLong{
-		ListShorByLong:   make(map[string]string),
+func NewShortLongURL(baseURL string) *ShortLongURL {
+	return &ShortLongURL{
+		ShorByLong:       make(map[string]string),
+		LongByShort:      make(map[string]string),
 		BaseAddrShortURL: baseURL,
 	}
 }

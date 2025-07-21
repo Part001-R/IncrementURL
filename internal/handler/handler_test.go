@@ -15,7 +15,7 @@ import (
 
 func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 
-	shortLong := service.NewShortByLong("http://localhost:8080/")
+	shortLong := service.NewShortLongURL("http://localhost:8080/")
 	shortLongHandler := &ShortLongT{
 		List: shortLong,
 	}
@@ -53,8 +53,8 @@ func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 
 			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 
-			_, ok := shortLongHandler.List.ListShorByLong[tt.bodyT]
-			assert.Equalf(t, ok, true, "нет признака существования ключа в мане")
+			_, ok := shortLongHandler.List.ShorByLong[tt.bodyT]
+			assert.Equalf(t, ok, true, "нет признака существования ключа в мапе")
 		})
 	}
 }
@@ -62,7 +62,7 @@ func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 func Test_ShortURLFromLong_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
-		List:             &service.ShortByLong{},
+		List:             &service.ShortLongURL{},
 		BaseAddrShortURL: "http://localhost:8080/",
 		ServerAddr:       "http://localhost:8080",
 	}
@@ -105,15 +105,18 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 }
 
 func Test_LongURLFromShort_SUCCESS(t *testing.T) {
-
-	shortLong := service.NewShortByLong(":8080")
+	shortLong := service.NewShortLongURL(":8080")
 	shortLongHandler := &ShortLongT{
 		List: shortLong,
 	}
+	shortLongHandler.List.LongByShort = make(map[string]string)
 
 	uLong := "https://practicum.yandex.ru/"
-	code := generateCode(6)
-	shortLongHandler.List.ListShorByLong[uLong] = code
+
+	code, err := generateCode(6)
+	require.NoErrorf(t, err, "ожидалось отсутствие ошибки, а принято {%v}", err)
+
+	shortLongHandler.List.LongByShort[code] = uLong
 
 	urlReq := fmt.Sprintf("http://localhost:8080/%s", code)
 	req := httptest.NewRequest(http.MethodGet, urlReq, nil)
@@ -129,14 +132,13 @@ func Test_LongURLFromShort_SUCCESS(t *testing.T) {
 	rxHead := resp.Header.Get("Location")
 
 	require.Equalf(t, http.StatusTemporaryRedirect, resp.StatusCode, "ожидался код {%d}, а принят {%d}", http.StatusTemporaryRedirect, resp.StatusCode)
-	assert.Equalf(t, uLong, rxHead, "ожидался {%d}, а принято {%d}", uLong, rxHead)
-
+	assert.Equalf(t, uLong, rxHead, "ожидался {%s}, а принято {%s}", uLong, rxHead)
 }
 
 func Test_LongURLFromShort_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
-		List:             &service.ShortByLong{},
+		List:             &service.ShortLongURL{},
 		BaseAddrShortURL: "http://localhost:8080/",
 		ServerAddr:       "http://localhost:8080",
 	}
@@ -305,6 +307,55 @@ func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
 			body, err := io.ReadAll(resp.Body)
 			require.NoErrorf(t, err, "ошибка при чтении тела ответа {%v}", err)
 			assert.Equalf(t, tt.wantBody, string(body), "принято{%s} а ожидалось {%s}", tt.wantBody, string(body))
+		})
+	}
+}
+
+func Test_ValueMetricByTypeAndName_FAULT(t *testing.T) {
+	testMetrics := service.NewMetrics()
+
+	metricsHandler := &MetricsHandlerT{
+		Metrics: testMetrics,
+	}
+	testsData := []struct {
+		nameT          string
+		methodT        string
+		urlT           string
+		wantStatusCode int
+		wantBody       string
+	}{
+		{
+			nameT:          "wrong metric type",
+			methodT:        http.MethodGet,
+			urlT:           "http://localhost:8080/value/wrong/PollCount",
+			wantStatusCode: http.StatusNotFound,
+		},
+		{
+			nameT:          "wrong URL",
+			methodT:        http.MethodGet,
+			urlT:           "http://localhost:8080/value/counter//",
+			wantStatusCode: http.StatusNotFound,
+		},
+		{
+			nameT:          "wrong method",
+			methodT:        http.MethodPost,
+			urlT:           "http://localhost:8080/value/gauge/PollCount",
+			wantStatusCode: http.StatusBadRequest,
+		},
+	}
+	for _, tt := range testsData {
+		t.Run(tt.nameT, func(t *testing.T) {
+			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
+			res := httptest.NewRecorder()
+
+			metricsHandler.ValueMetricByTypeAndName(res, req)
+			resp := res.Result()
+			defer func() {
+				err := resp.Body.Close()
+				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
+			}()
+
+			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 		})
 	}
 }
