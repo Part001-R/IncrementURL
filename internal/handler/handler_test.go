@@ -61,7 +61,7 @@ func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 func Test_ShortURLFromLong_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
-		List:             &ShortLongUrlT{},
+		List:             &ShortLongURLT{},
 		BaseAddrShortURL: "http://localhost:8080/",
 		ServerAddr:       "http://localhost:8080",
 	}
@@ -138,7 +138,7 @@ func Test_LongURLFromShort_SUCCESS(t *testing.T) {
 func Test_LongURLFromShort_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
-		List:             &ShortLongUrlT{},
+		List:             &ShortLongURLT{},
 		BaseAddrShortURL: "http://localhost:8080/",
 		ServerAddr:       "http://localhost:8080",
 	}

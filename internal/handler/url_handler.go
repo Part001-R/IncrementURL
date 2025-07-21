@@ -9,14 +9,14 @@ import (
 	"sync"
 )
 
-type ShortLongUrlT struct {
+type ShortLongURLT struct {
 	ShorByLong  map[string]string
 	LongByShort map[string]string
 	Mu          sync.RWMutex
 }
 
-func NewShortLongURL() *ShortLongUrlT {
-	return &ShortLongUrlT{
+func NewShortLongURL() *ShortLongURLT {
+	return &ShortLongURLT{
 		ShorByLong:  make(map[string]string),
 		LongByShort: make(map[string]string),
 		Mu:          sync.RWMutex{},
@@ -24,7 +24,7 @@ func NewShortLongURL() *ShortLongUrlT {
 }
 
 type ShortLongT struct {
-	List             *ShortLongUrlT
+	List             *ShortLongURLT
 	BaseAddrShortURL string
 	ServerAddr       string
 }
@@ -34,7 +34,7 @@ type ShortLongI interface {
 	LongURLFromShort(w http.ResponseWriter, r *http.Request)
 }
 
-func NewShortLongStorage(storage *ShortLongUrlT, baseAddrShort, srvAddr string) ShortLongI {
+func NewShortLongStorage(storage *ShortLongURLT, baseAddrShort, srvAddr string) ShortLongI {
 	return &ShortLongT{
 		List:             storage,
 		BaseAddrShortURL: baseAddrShort,
