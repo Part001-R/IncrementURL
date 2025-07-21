@@ -10,8 +10,10 @@ import (
 	"strings"
 )
 
+const defaultEndpoint = "http://localhost:8080/"
+
 func main() {
-	endpoint := "http://localhost:8080/"
+	endpoint := getEndpoint()
 	// контейнер данных для запроса
 	data := url.Values{}
 	// приглашение в консоли
@@ -52,4 +54,8 @@ func main() {
 	}
 	// и печатаем его
 	fmt.Println(string(body))
+}
+
+func getEndpoint() string {
+	return defaultEndpoint
 }

@@ -8,14 +8,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Part001-R/IncrementURL/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 
-	shortLong := service.NewShortLongURL("http://localhost:8080/")
+	shortLong := NewShortLongURL()
 	shortLongHandler := &ShortLongT{
 		List: shortLong,
 	}
@@ -62,7 +61,7 @@ func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 func Test_ShortURLFromLong_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
-		List:             &service.ShortLongURL{},
+		List:             &ShortLongUrlT{},
 		BaseAddrShortURL: "http://localhost:8080/",
 		ServerAddr:       "http://localhost:8080",
 	}
@@ -105,7 +104,8 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 }
 
 func Test_LongURLFromShort_SUCCESS(t *testing.T) {
-	shortLong := service.NewShortLongURL(":8080")
+
+	shortLong := NewShortLongURL()
 	shortLongHandler := &ShortLongT{
 		List: shortLong,
 	}
@@ -138,7 +138,7 @@ func Test_LongURLFromShort_SUCCESS(t *testing.T) {
 func Test_LongURLFromShort_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
-		List:             &service.ShortLongURL{},
+		List:             &ShortLongUrlT{},
 		BaseAddrShortURL: "http://localhost:8080/",
 		ServerAddr:       "http://localhost:8080",
 	}
@@ -183,7 +183,7 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 }
 
 func Test_UpdateMetricByTypeAndName_SUCCESS(t *testing.T) {
-	testMetrics := service.NewMetrics()
+	testMetrics := NewMetrics()
 
 	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,
@@ -219,7 +219,7 @@ func Test_UpdateMetricByTypeAndName_SUCCESS(t *testing.T) {
 }
 
 func Test_UpdateMetricByTypeAndName_FAULT(t *testing.T) {
-	testMetrics := service.NewMetrics()
+	testMetrics := NewMetrics()
 
 	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,
@@ -268,7 +268,7 @@ func Test_UpdateMetricByTypeAndName_FAULT(t *testing.T) {
 }
 
 func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
-	testMetrics := service.NewMetrics()
+	testMetrics := NewMetrics()
 
 	testMetrics.CounterMetrics["PollCount"] = 123
 
@@ -312,7 +312,7 @@ func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
 }
 
 func Test_ValueMetricByTypeAndName_FAULT(t *testing.T) {
-	testMetrics := service.NewMetrics()
+	testMetrics := NewMetrics()
 
 	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,
@@ -362,7 +362,7 @@ func Test_ValueMetricByTypeAndName_FAULT(t *testing.T) {
 
 func TestAllMetricsHTML_SUCCESS(t *testing.T) {
 
-	testMetrics := service.NewMetrics()
+	testMetrics := NewMetrics()
 
 	testMetrics.CounterMetrics["PollCount"] = 10
 	testMetrics.CounterMetrics["SomeCounter"] = 5
@@ -411,7 +411,7 @@ func TestAllMetricsHTML_SUCCESS(t *testing.T) {
 
 func TestAllMetricsHTML_FAULT(t *testing.T) {
 
-	testMetrics := service.NewMetrics()
+	testMetrics := NewMetrics()
 
 	metricsHandler := &MetricsHandlerT{
 		Metrics: testMetrics,

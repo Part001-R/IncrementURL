@@ -7,21 +7,45 @@ import (
 	"io"
 	"net/http"
 	"sync"
-
-	"github.com/Part001-R/IncrementURL/internal/service"
 )
 
+type ShortLongUrlT struct {
+	ShorByLong  map[string]string
+	LongByShort map[string]string
+	Mu          sync.RWMutex
+}
+
+func NewShortLongURL() *ShortLongUrlT {
+	return &ShortLongUrlT{
+		ShorByLong:  make(map[string]string),
+		LongByShort: make(map[string]string),
+		Mu:          sync.RWMutex{},
+	}
+}
+
 type ShortLongT struct {
-	List             *service.ShortLongURL
+	List             *ShortLongUrlT
 	BaseAddrShortURL string
 	ServerAddr       string
-	mu               sync.RWMutex
+}
+
+type ShortLongI interface {
+	ShortURLFromLong(w http.ResponseWriter, r *http.Request)
+	LongURLFromShort(w http.ResponseWriter, r *http.Request)
+}
+
+func NewShortLongStorage(storage *ShortLongUrlT, baseAddrShort, srvAddr string) ShortLongI {
+	return &ShortLongT{
+		List:             storage,
+		BaseAddrShortURL: baseAddrShort,
+		ServerAddr:       srvAddr,
+	}
 }
 
 func (sl *ShortLongT) ShortURLFromLong(w http.ResponseWriter, r *http.Request) {
 
-	sl.mu.RLock()
-	defer sl.mu.RUnlock()
+	sl.List.Mu.RLock()
+	defer sl.List.Mu.RUnlock()
 
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -60,8 +84,8 @@ func (sl *ShortLongT) ShortURLFromLong(w http.ResponseWriter, r *http.Request) {
 
 func (sl *ShortLongT) LongURLFromShort(w http.ResponseWriter, r *http.Request) {
 
-	sl.mu.RLock()
-	defer sl.mu.RUnlock()
+	sl.List.Mu.RLock()
+	defer sl.List.Mu.RUnlock()
 
 	w.Header().Set("Content-Type", "text/plain")
 

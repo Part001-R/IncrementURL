@@ -6,12 +6,37 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/Part001-R/IncrementURL/internal/service"
+	"sync"
 )
 
+type MetricsT struct {
+	GaugeMetrics   map[string]float64
+	CounterMetrics map[string]int64
+	Mu             sync.RWMutex
+}
+
+func NewMetrics() *MetricsT {
+	return &MetricsT{
+		GaugeMetrics:   make(map[string]float64),
+		CounterMetrics: make(map[string]int64),
+		Mu:             sync.RWMutex{},
+	}
+}
+
 type MetricsHandlerT struct {
-	Metrics *service.Metrics
+	Metrics *MetricsT
+}
+
+type MetricsI interface {
+	UpdateMetricByTypeAndName(w http.ResponseWriter, r *http.Request)
+	AllMetricsHTML(w http.ResponseWriter, r *http.Request)
+	ValueMetricByTypeAndName(w http.ResponseWriter, r *http.Request)
+}
+
+func NewMetricsStorage(m *MetricsT) MetricsI {
+	return &MetricsHandlerT{
+		Metrics: m,
+	}
 }
 
 func (m *MetricsHandlerT) UpdateMetricByTypeAndName(w http.ResponseWriter, r *http.Request) {

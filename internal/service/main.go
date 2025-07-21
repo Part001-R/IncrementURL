@@ -1,32 +1,34 @@
 package service
 
 import (
-	"sync"
+	"fmt"
+	"net/http"
+
+	"github.com/Part001-R/IncrementURL/internal/config/config"
+	"github.com/Part001-R/IncrementURL/internal/handler"
+	"github.com/go-chi/chi"
 )
 
-type Metrics struct {
-	GaugeMetrics   map[string]float64
-	CounterMetrics map[string]int64
-	Mu             sync.RWMutex
-}
-
-type ShortLongURL struct {
-	BaseAddrShortURL string
-	ShorByLong       map[string]string
-	LongByShort      map[string]string
-}
-
-func NewMetrics() *Metrics {
-	return &Metrics{
-		GaugeMetrics:   make(map[string]float64),
-		CounterMetrics: make(map[string]int64),
+func Run() error {
+	baseAddrShortURL, serverAddr, err := config.ParseFlags()
+	if err != nil {
+		return fmt.Errorf("ошибка чтения флагов: {%w}", err)
 	}
-}
 
-func NewShortLongURL(baseURL string) *ShortLongURL {
-	return &ShortLongURL{
-		ShorByLong:       make(map[string]string),
-		LongByShort:      make(map[string]string),
-		BaseAddrShortURL: baseURL,
-	}
+	metrics := handler.NewMetrics()
+	storageMetrics := handler.NewMetricsStorage(metrics)
+
+	shortLong := handler.NewShortLongURL()
+	storageLongShort := handler.NewShortLongStorage(shortLong, baseAddrShortURL, serverAddr)
+
+	cr := chi.NewRouter()
+	cr.Post("/", storageLongShort.ShortURLFromLong)
+	cr.Get("/{id}", storageLongShort.LongURLFromShort)
+	cr.Post("/update/{type}/{name}/{value}", storageMetrics.UpdateMetricByTypeAndName)
+	cr.Get("/", storageMetrics.AllMetricsHTML)
+	cr.Get("/value/{type}/{name}", storageMetrics.ValueMetricByTypeAndName)
+
+	fmt.Printf("Запуск сервера %s\n", serverAddr)
+	err = http.ListenAndServe(serverAddr, cr)
+	return fmt.Errorf("ошибка http сервера: {%w}", err)
 }
