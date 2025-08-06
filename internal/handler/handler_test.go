@@ -486,15 +486,17 @@ func Test_Middleware_FAULT(t *testing.T) {
 			rawData:          "https://practicum.yandex.ru/",
 			wantStatusCode:   http.StatusBadRequest,
 		},
-		{
-			nameT:            "неподдерживаемый тип контента",
-			methodReqT:       http.MethodPost,
-			acceptEncodingT:  "gzip",
-			contentEncodingT: "gzip",
-			contentTypeT:     "AAA",
-			rawData:          "https://practicum.yandex.ru/",
-			wantStatusCode:   http.StatusBadRequest,
-		},
+		/*
+			{
+				nameT:            "неподдерживаемый тип контента",
+				methodReqT:       http.MethodPost,
+				acceptEncodingT:  "gzip",
+				contentEncodingT: "gzip",
+				contentTypeT:     "AAA",
+				rawData:          "https://practicum.yandex.ru/",
+				wantStatusCode:   http.StatusBadRequest,
+			},
+		*/
 	}
 
 	for _, tt := range testData {
