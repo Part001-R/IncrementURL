@@ -151,7 +151,7 @@ func Test_ShortURLFromLongJSON_SUCCESS(t *testing.T) {
 			nameT:          "correct data",
 			urlT:           "http://localhost:8080/api/shorten",
 			methodReqT:     http.MethodPost,
-			bodyT:          rxLongURLT{Url: "https://practicum.yandex.ru"},
+			bodyT:          rxLongURLT{URL: "https://practicum.yandex.ru"},
 			wantStatusCode: http.StatusCreated,
 		},
 	}
@@ -178,7 +178,7 @@ func Test_ShortURLFromLongJSON_SUCCESS(t *testing.T) {
 
 			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
 
-			_, ok := shortLongHandler.List.ShorByLong[tt.bodyT.Url]
+			_, ok := shortLongHandler.List.ShorByLong[tt.bodyT.URL]
 			assert.Equalf(t, ok, true, "нет признака существования ключа в мапе")
 		})
 	}
@@ -203,7 +203,7 @@ func Test_ShortURLFromLongJSON_FAULT(t *testing.T) {
 			nameT:          "неподдерживаемый метод",
 			urlT:           "http://localhost:8080/api/shorten",
 			methodReqT:     http.MethodGet,
-			bodyT:          rxLongURLT{Url: "https://practicum.yandex.ru"},
+			bodyT:          rxLongURLT{URL: "https://practicum.yandex.ru"},
 			contentType:    "application/json",
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -211,7 +211,7 @@ func Test_ShortURLFromLongJSON_FAULT(t *testing.T) {
 			nameT:          "нет данных URL",
 			urlT:           "http://localhost:8080/api/shorten",
 			methodReqT:     http.MethodPost,
-			bodyT:          rxLongURLT{Url: ""},
+			bodyT:          rxLongURLT{URL: ""},
 			contentType:    "application/json",
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -219,7 +219,7 @@ func Test_ShortURLFromLongJSON_FAULT(t *testing.T) {
 			nameT:          "неподдерживаемый тип контента",
 			urlT:           "http://localhost:8080/api/shorten",
 			methodReqT:     http.MethodPost,
-			bodyT:          rxLongURLT{Url: "https://practicum.yandex.ru"},
+			bodyT:          rxLongURLT{URL: "https://practicum.yandex.ru"},
 			contentType:    "application/AAA",
 			wantStatusCode: http.StatusBadRequest,
 		},

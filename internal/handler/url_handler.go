@@ -39,7 +39,7 @@ type EventURLT struct {
 }
 
 type rxLongURLT struct {
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 
 type txShortURLT struct {
@@ -179,12 +179,12 @@ func (sl *ShortLongT) ShortURLFromLongJSON(w http.ResponseWriter, r *http.Reques
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	if rxJSON.Url == "" {
+	if rxJSON.URL == "" {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
-	short, err := fillListShortByLong(sl.List.ShorByLong, sl.List.LongByShort, rxJSON.Url)
+	short, err := fillListShortByLong(sl.List.ShorByLong, sl.List.LongByShort, rxJSON.URL)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
