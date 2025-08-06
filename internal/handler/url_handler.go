@@ -258,19 +258,17 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 
-		/*
-			// Проверка поддержки типа контента
-			contentType := r.Header.Get("Content-Type")
-			if contentType != "" {
-				switch contentType {
-				case "application/json", "text/html", "text/plain":
+		// Проверка поддержки типа контента
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "" {
+			switch contentType {
+			case "application/json", "text/html", "text/plain":
 
-				default:
-					http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-					return
-				}
+			default:
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
 			}
-		*/
+		}
 
 		// Проверка поддерживает ли сервер запрашиваемую клиентом кодировку
 		acceptEncoding := r.Header.Get("Accept-Encoding")
