@@ -22,14 +22,14 @@ import (
 
 func Test_ShortURLFromLong_SUCCESS(t *testing.T) {
 
-	flags := config.ParseFlags()
+	//flags := config.ParseFlags()
 
 	shortLong := NewShortLongURL()
 	shortLongHandler := &ShortLongT{
 		List:             shortLong,
-		BaseAddrShortURL: flags.BaseAddrShortURL,
-		ServerAddr:       flags.ServerAddr,
-		FileStoragePath:  flags.FileStoragePath,
+		BaseAddrShortURL: ":8080/",
+		ServerAddr:       ":8080",
+		FileStoragePath:  "storage.json",
 	}
 
 	testData := []struct {
@@ -92,8 +92,8 @@ func Test_ShortURLFromLong_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
 		List:             &ShortLongURLT{},
-		BaseAddrShortURL: "http://localhost:8080/",
-		ServerAddr:       "http://localhost:8080",
+		BaseAddrShortURL: ":8080/",
+		ServerAddr:       ":8080",
 	}
 
 	testData := []struct {
@@ -284,8 +284,8 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 
 	shortLong := &ShortLongT{
 		List:             &ShortLongURLT{},
-		BaseAddrShortURL: "http://localhost:8080/",
-		ServerAddr:       "http://localhost:8080",
+		BaseAddrShortURL: ":8080/",
+		ServerAddr:       ":8080",
 	}
 
 	testData := []struct {
@@ -329,14 +329,14 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 
 func Test_Middleware_SUCCESS(t *testing.T) {
 
-	flags := config.ParseFlags()
+	//flags := config.ParseFlags()
 
 	shortLong := NewShortLongURL()
 	shortLongHandler := &ShortLongT{
 		List:             shortLong,
-		BaseAddrShortURL: flags.BaseAddrShortURL,
-		ServerAddr:       flags.ServerAddr,
-		FileStoragePath:  flags.FileStoragePath,
+		BaseAddrShortURL: ":8080/",
+		ServerAddr:       ":8080",
+		FileStoragePath:  "storage.json",
 	}
 
 	handler := http.HandlerFunc(Middleware(shortLongHandler.ShortURLFromLong))
@@ -532,14 +532,14 @@ func Test_Middleware_FAULT(t *testing.T) {
 
 func Test_LoadFileURL_SUCCESS(t *testing.T) {
 
-	flags := config.ParseFlags()
+	//flags := config.ParseFlags()
 
 	shortLong := NewShortLongURL()
 	shortLongHandler := &ShortLongT{
 		List:             shortLong,
-		BaseAddrShortURL: flags.BaseAddrShortURL,
-		ServerAddr:       flags.ServerAddr,
-		FileStoragePath:  flags.FileStoragePath,
+		BaseAddrShortURL: ":8080/",
+		ServerAddr:       ":8080",
+		FileStoragePath:  "storage.json",
 	}
 
 	testData := struct {
