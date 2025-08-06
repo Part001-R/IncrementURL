@@ -262,7 +262,7 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "" {
 			switch contentType {
-			case "application/json", "text/html":
+			case "application/json", "text/html", "text/plain":
 
 			default:
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
