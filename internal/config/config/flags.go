@@ -2,31 +2,58 @@ package config
 
 import (
 	"flag"
+	"os"
 )
 
 type FlagsT struct {
-	FlagServerAddr       string
-	FlagBaseAddrShortURL string
+	ServerAddr          string
+	BaseAddrShortURL    string
+	LogLevel            string
+	FileStoragePath     string
+	StoreIntervalMetr   string // Metrics
+	FileStoragePathMetr string // Metrics
+	RestoreMetr         string // Metrics
 }
 
-var (
-	Flags = FlagsT{}
-)
+func ParseFlags() FlagsT {
 
-func ParseFlags() (string, string, error) {
+	var flags = FlagsT{}
 
-	var serverAddr string
-	var baseAddrShortURL string
+	// URL
+	flag.StringVar(&flags.ServerAddr, "a", ":8080", "адрес и порт сервера")
+	flag.StringVar(&flags.BaseAddrShortURL, "b", ":8080/", "базовый адрес для коротких URL")
+	flag.StringVar(&flags.LogLevel, "l", "info", "уровень логирования")
+	flag.StringVar(&flags.FileStoragePath, "f", "storage.json", "хранилище ссылок")
+	// Metrics
+	flag.StringVar(&flags.StoreIntervalMetr, "i", "300", "периодичность сохранения метрик в файл")
+	flag.StringVar(&flags.FileStoragePathMetr, "fm", "storageMetrics.json", "хранилище метрик")
+	flag.StringVar(&flags.RestoreMetr, "r", "false", "загрузка данных из файла при старте")
 
-	flag.StringVar(&serverAddr, "a", ":8080", "адрес и порт сервера")
-	flag.StringVar(&baseAddrShortURL, "b", ":8080/", "базовый адрес для коротких URL")
 	flag.Parse()
 
-	/*
-		if flag.NArg() > 0 {
-			return "", "", errors.New("позиционные аргументы не поддерживаются")
-		}
-	*/
+	// URL
+	if envValue := os.Getenv("SERVER_ADDRESS"); envValue != "" {
+		flags.ServerAddr = envValue
+	}
+	if envValue := os.Getenv("BASE_URL"); envValue != "" {
+		flags.BaseAddrShortURL = envValue
+	}
+	if envValue := os.Getenv("LOG_LEVEL"); envValue != "" {
+		flags.LogLevel = envValue
+	}
+	if envValue := os.Getenv("FILE_STORAGE_PATH"); envValue != "" {
+		flags.FileStoragePath = envValue
+	}
+	// Metrics
+	if envValue := os.Getenv("STORE_INTERVAL_M"); envValue != "" {
+		flags.StoreIntervalMetr = envValue
+	}
+	if envValue := os.Getenv("FILE_STORAGE_PATH_M"); envValue != "" {
+		flags.FileStoragePathMetr = envValue
+	}
+	if envValue := os.Getenv("RESTORE_M"); envValue != "" {
+		flags.RestoreMetr = envValue
+	}
 
-	return baseAddrShortURL, serverAddr, nil
+	return flags
 }
