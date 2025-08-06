@@ -260,14 +260,13 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 
 		// Проверка поддержки типа контента
 		contentType := r.Header.Get("Content-Type")
-		if contentType != "" {
-			switch contentType {
-			case "application/json", "text/html", "text/plain":
 
-			default:
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
+		switch contentType {
+		case "application/json", "text/html", "text/plain":
+
+		default:
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
 		}
 
 		// Проверка поддерживает ли сервер запрашиваемую клиентом кодировку
