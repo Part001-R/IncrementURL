@@ -121,8 +121,6 @@ func (sl *ShortLongT) LongURLFromShort(w http.ResponseWriter, r *http.Request) {
 	sl.List.Mu.RLock()
 	defer sl.List.Mu.RUnlock()
 
-	w.Header().Set("Content-Type", "text/plain")
-
 	if r.Method != http.MethodGet {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
@@ -141,7 +139,9 @@ func (sl *ShortLongT) LongURLFromShort(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
+	long = strings.Trim(long, "\"")
 
+	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Location", long)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
@@ -258,17 +258,19 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 
-		// Проверка поддержки типа контента
-		contentType := r.Header.Get("Content-Type")
-		if contentType != "" {
-			switch contentType {
-			case "application/json", "text/html", "text/plain":
+		/*
+			// Проверка поддержки типа контента
+			contentType := r.Header.Get("Content-Type")
+			if contentType != "" {
+				switch contentType {
+				case "application/json", "text/html", "text/plain":
 
-			default:
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
+				default:
+					http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+					return
+				}
 			}
-		}
+		*/
 
 		// Проверка поддерживает ли сервер запрашиваемую клиентом кодировку
 		acceptEncoding := r.Header.Get("Accept-Encoding")
@@ -325,8 +327,10 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 							logger.Log.Error("Ошибка при закрытии r.Body", zap.Error(err))
 						}
 					}()
+
 					r.Body = cr
 					found = true
+
 				default:
 				}
 			}
