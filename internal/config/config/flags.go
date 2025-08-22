@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-type FlagsT struct {
+type ConfigT struct {
 	ServerAddr          string
 	BaseAddrShortURL    string
 	LogLevel            string
@@ -13,17 +13,19 @@ type FlagsT struct {
 	StoreIntervalMetr   string // Metrics
 	FileStoragePathMetr string // Metrics
 	RestoreMetr         string // Metrics
+	DSNDB               string // Metrics
 }
 
-func ParseFlags() FlagsT {
+func ParseFlags() ConfigT {
 
-	var flags = FlagsT{}
+	var flags = ConfigT{}
 
 	// URL
 	flag.StringVar(&flags.ServerAddr, "a", ":8080", "адрес и порт сервера")
 	flag.StringVar(&flags.BaseAddrShortURL, "b", ":8080/", "базовый адрес для коротких URL")
 	flag.StringVar(&flags.LogLevel, "l", "info", "уровень логирования")
 	flag.StringVar(&flags.FileStoragePath, "f", "storage.json", "хранилище ссылок")
+	flag.StringVar(&flags.DSNDB, "d", "", "dsn подключения к БД")
 	// Metrics
 	flag.StringVar(&flags.StoreIntervalMetr, "i", "300", "периодичность сохранения метрик в файл")
 	flag.StringVar(&flags.FileStoragePathMetr, "fm", "storageMetrics.json", "хранилище метрик")
@@ -43,6 +45,9 @@ func ParseFlags() FlagsT {
 	}
 	if envValue := os.Getenv("FILE_STORAGE_PATH"); envValue != "" {
 		flags.FileStoragePath = envValue
+	}
+	if envValue := os.Getenv("DATABASE_DSN"); envValue != "" {
+		flags.DSNDB = envValue
 	}
 	// Metrics
 	if envValue := os.Getenv("STORE_INTERVAL_M"); envValue != "" {
