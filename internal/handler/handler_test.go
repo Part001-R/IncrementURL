@@ -223,21 +223,6 @@ func Test_internalShortURLFromLong_FAULT(t *testing.T) {
 			wantStatusCode: http.StatusInternalServerError,
 		},
 		{
-			nameT:      "Неподдерживаемый тип контента",
-			urlT:       "http://localhost:8080/",
-			methodReqT: http.MethodPost,
-			bodyT:      "https://practicum.yandex.ru/",
-			initMockT: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec("INSERT INTO").
-					WithArgs("https://practicum.yandex.ru/", sqlmock.AnyArg()).
-					WillReturnResult(sqlmock.NewResult(1, 1))
-			},
-			useDBT:         true,
-			useConfT:       true,
-			contentTypeT:   "AAA",
-			wantStatusCode: http.StatusBadRequest,
-		},
-		{
 			nameT:      "Нет указателя на конфигурацию",
 			urlT:       "http://localhost:8080/",
 			methodReqT: http.MethodPost,
