@@ -109,31 +109,13 @@ func (m *MetricsHandlerT) UpdateMetricByTypeAndName(w http.ResponseWriter, r *ht
 	m.Metrics.Mu.RLock()
 	defer m.Metrics.Mu.RUnlock()
 
-	if r.Method != http.MethodPost {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
+	// Подключение к БД
+	var db *sql.DB
+	var err error
 
-	rxData := r.URL.Path[1:]
-	slRxData := strings.Split(rxData, "/")
-	if len(slRxData) != 4 {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-	typeMetric := slRxData[1] // gauge, counter
-	nameMetric := slRxData[2]
-	valueMetric := slRxData[3]
+	if m.DB.DSN != "" {
 
-	if len(nameMetric) == 0 {
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		return
-	}
-
-	// Обработка сохранения
-	if m.DB.DSN != "" { // сохранение в БД
-
-		// Подключение к БД
-		db, err := sql.Open("postgres", m.DB.DSN)
+		db, err = sql.Open("postgres", m.DB.DSN)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -141,68 +123,9 @@ func (m *MetricsHandlerT) UpdateMetricByTypeAndName(w http.ResponseWriter, r *ht
 		defer func() {
 			_ = db.Close()
 		}()
-
-		// Сохранение
-		switch typeMetric {
-		case "counter":
-			value, ok := m.Metrics.CounterMetrics[nameMetric]
-			if !ok {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			err := storageDBCounterMetrics(db, nameMetric, value)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-		case "gauge":
-			value, ok := m.Metrics.GaugeMetrics[nameMetric]
-			if !ok {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-			err := storageDBGaugeMetrics(db, nameMetric, value)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-		}
-	} else { // Синхронное сохранение в файл и сохранение в мапы
-
-		// Сохранение в мапы
-		switch typeMetric {
-		case "counter":
-			v, err := strconv.ParseInt(valueMetric, 10, 64)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
-			m.Metrics.CounterMetrics[nameMetric] += v
-
-		case "gauge":
-			v, err := strconv.ParseFloat(valueMetric, 64)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
-			m.Metrics.GaugeMetrics[nameMetric] = v
-
-		default:
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
-		}
-
-		// Синхронное сохранение в файл
-		if m.StoreIntervalMetr == "0" {
-			err := storage(m.FileStoragePathMetr, m.Metrics.GaugeMetrics, m.Metrics.CounterMetrics)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-		}
 	}
 
-	w.WriteHeader(http.StatusOK)
+	internalUpdateMetricByTypeAndName(db, m, w, r)
 }
 
 func (m *MetricsHandlerT) UpdateMetricByTypeAndNameBatch(w http.ResponseWriter, r *http.Request) {
@@ -387,45 +310,8 @@ func (m *MetricsHandlerT) ValueMetricByTypeAndName(w http.ResponseWriter, r *htt
 	m.Metrics.Mu.RLock()
 	defer m.Metrics.Mu.RUnlock()
 
-	w.Header().Set("Content-Type", "text/plain")
+	internalValueMetricByTypeAndName(m, w, r)
 
-	if r.Method != http.MethodGet {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	rxData := r.URL.Path[1:]
-	slRxData := strings.Split(rxData, "/")
-	metricType := slRxData[1]
-	metricName := slRxData[2]
-
-	val := ""
-
-	switch metricType {
-	case "counter":
-		v, ok := m.Metrics.CounterMetrics[metricName]
-		if !ok {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
-		}
-		val = fmt.Sprintf("%d", v)
-
-	case "gauge":
-		v, ok := m.Metrics.GaugeMetrics[metricName]
-		if !ok {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
-		}
-		val = fmt.Sprintf("%f", v)
-
-	default:
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		return
-
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(val))
 }
 
 func (m *MetricsHandlerT) StorageMetrics() error {
@@ -808,4 +694,141 @@ func storageMetricsInMap(m []rxMetricsBatchT, gM map[string]float64, cM map[stri
 	}
 
 	return nil
+}
+
+func internalUpdateMetricByTypeAndName(db *sql.DB, m *MetricsHandlerT, w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	rxData := r.URL.Path[1:]
+	slRxData := strings.Split(rxData, "/")
+	if len(slRxData) != 4 {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	typeMetric := slRxData[1] // gauge, counter
+	nameMetric := slRxData[2]
+	valueMetric := slRxData[3]
+
+	if len(nameMetric) == 0 {
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
+	// Обработка сохранения
+	if m.DB.DSN != "" { // сохранение в БД
+
+		// Сохранение
+		switch typeMetric {
+		case "counter":
+			value, ok := m.Metrics.CounterMetrics[nameMetric]
+			if !ok {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			if m.DB.DSN != "" {
+				err := storageDBCounterMetrics(db, nameMetric, value)
+				if err != nil {
+					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+					return
+				}
+			}
+
+		case "gauge":
+			value, ok := m.Metrics.GaugeMetrics[nameMetric]
+			if !ok {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+			if m.DB.DSN != "" {
+				err := storageDBGaugeMetrics(db, nameMetric, value)
+				if err != nil {
+					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+					return
+				}
+			}
+
+		}
+	} else { // Синхронное сохранение в файл и сохранение в мапы
+
+		// Сохранение в мапы
+		switch typeMetric {
+		case "counter":
+			v, err := strconv.ParseInt(valueMetric, 10, 64)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
+			}
+			m.Metrics.CounterMetrics[nameMetric] += v
+
+		case "gauge":
+			v, err := strconv.ParseFloat(valueMetric, 64)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
+			}
+			m.Metrics.GaugeMetrics[nameMetric] = v
+
+		default:
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		// Синхронное сохранение в файл
+		if m.StoreIntervalMetr == "0" {
+			err := storage(m.FileStoragePathMetr, m.Metrics.GaugeMetrics, m.Metrics.CounterMetrics)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func internalValueMetricByTypeAndName(m *MetricsHandlerT, w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "text/plain")
+
+	if r.Method != http.MethodGet {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	rxData := r.URL.Path[1:]
+	slRxData := strings.Split(rxData, "/")
+	metricType := slRxData[1]
+	metricName := slRxData[2]
+
+	val := ""
+
+	switch metricType {
+	case "counter":
+		v, ok := m.Metrics.CounterMetrics[metricName]
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		val = fmt.Sprintf("%d", v)
+
+	case "gauge":
+		v, ok := m.Metrics.GaugeMetrics[metricName]
+		if !ok {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		val = fmt.Sprintf("%f", v)
+
+	default:
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(val))
 }

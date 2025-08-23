@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/Part001-R/IncrementURL/internal/config/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1425,81 +1424,71 @@ func Test_workWithRxData_FAULT(t *testing.T) {
 
 func Test_UpdateMetricByTypeAndName_SUCCESS(t *testing.T) {
 
-	flags := config.ParseFlags()
-	metricsDB := NewMetricsDB(flags.DSNDB)
+	// подготовка
+	conf := &MetricsHandlerT{
+		Metrics: &MetricsT{
+			GaugeMetrics:   make(map[string]float64),
+			CounterMetrics: make(map[string]int64),
+			Mu:             sync.RWMutex{},
+		},
+		DB: &MetricsDBT{
+			DSN: "",
+			Mu:  sync.RWMutex{},
+		},
+		StoreIntervalMetr:   "300",
+		FileStoragePathMetr: "storageMetrics.json",
+		RestoreMetr:         "false",
+	}
 
-	testMetrics := NewMetrics()
-	m := NewMetricsStorage(testMetrics, metricsDB, flags)
+	conf.Metrics.GaugeMetrics["LastGC"] = 1.0
+	conf.Metrics.CounterMetrics["counter"] = 1
 
 	testsData := []struct {
 		nameT          string
 		methodT        string
 		urlT           string
+		initMockT      func(mock sqlmock.Sqlmock)
 		wantStatusCode int
 	}{
 		{
-			nameT:          "корректные данные 1",
-			methodT:        http.MethodPost,
-			urlT:           "http://localhost:8080/update/gauge/LastGC/1257894000000000000",
+			nameT:   "корректные данные 1",
+			methodT: http.MethodPost,
+			urlT:    "http://localhost:8080/update/gauge/LastGC/1257894000000000000",
+			initMockT: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO").
+					WithArgs("https://practicum.yandex.ru/", sqlmock.AnyArg()).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
-			nameT:          "корректные данные 2",
-			methodT:        http.MethodPost,
-			urlT:           "http://localhost:8080/update/counter/NumGC/42",
+			nameT:   "корректные данные 2",
+			methodT: http.MethodPost,
+			urlT:    "http://localhost:8080/update/counter/NumGC/42",
+			initMockT: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO").
+					WithArgs("https://practicum.yandex.ru/", sqlmock.AnyArg()).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
 			wantStatusCode: http.StatusOK,
 		},
 	}
+
+	// тесты
 	for _, tt := range testsData {
 		t.Run(tt.nameT, func(t *testing.T) {
+
+			db, mock, err := sqlmock.New()
+			require.NoError(t, err)
+			defer db.Close()
+
+			tt.initMockT(mock)
+
 			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
 			res := httptest.NewRecorder()
 
-			m.UpdateMetricByTypeAndName(res, req)
-			resp := res.Result()
-			defer func() {
-				err := resp.Body.Close()
-				assert.NoErrorf(t, err, "ошибка при закрытии потока {%v}", err)
-			}()
+			internalUpdateMetricByTypeAndName(db, conf, res, req)
 
-			require.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d}, а принят {%d}", tt.wantStatusCode, resp.StatusCode)
-		})
-	}
-}
-
-func Test_UpdateMetricByTypeAndName_SUCCESS_(t *testing.T) {
-
-	flags := config.ParseFlags()
-	metricsDB := NewMetricsDB(flags.DSNDB)
-
-	testMetrics := NewMetrics()
-	m := NewMetricsStorage(testMetrics, metricsDB, flags)
-
-	testsData := []struct {
-		nameT          string
-		methodT        string
-		urlT           string
-		wantStatusCode int
-	}{
-		{
-			nameT:          "корректные данные 1",
-			methodT:        http.MethodPost,
-			urlT:           "http://localhost:8080/update/gauge/LastGC/1257894000000000000",
-			wantStatusCode: http.StatusOK,
-		},
-		{
-			nameT:          "корректные данные 2",
-			methodT:        http.MethodPost,
-			urlT:           "http://localhost:8080/update/counter/NumGC/42",
-			wantStatusCode: http.StatusOK,
-		},
-	}
-	for _, tt := range testsData {
-		t.Run(tt.nameT, func(t *testing.T) {
-			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
-			res := httptest.NewRecorder()
-
-			m.UpdateMetricByTypeAndName(res, req)
 			resp := res.Result()
 			defer func() {
 				err := resp.Body.Close()
@@ -1513,17 +1502,28 @@ func Test_UpdateMetricByTypeAndName_SUCCESS_(t *testing.T) {
 
 func Test_UpdateMetricByTypeAndName_FAULT(t *testing.T) {
 
-	flags := config.ParseFlags()
-	metricsDB := NewMetricsDB(flags.DSNDB)
-
-	testMetrics := NewMetrics()
-	m := NewMetricsStorage(testMetrics, metricsDB, flags)
+	// подготовка
+	conf := &MetricsHandlerT{
+		Metrics: &MetricsT{
+			GaugeMetrics:   make(map[string]float64),
+			CounterMetrics: make(map[string]int64),
+			Mu:             sync.RWMutex{},
+		},
+		DB: &MetricsDBT{
+			DSN: "",
+			Mu:  sync.RWMutex{},
+		},
+		StoreIntervalMetr:   "300",
+		FileStoragePathMetr: "storageMetrics.json",
+		RestoreMetr:         "false",
+	}
 
 	testsData := []struct {
 		nameT          string
 		methodT        string
 		urlT           string
 		wantStatusCode int
+		initMockT      func(mock sqlmock.Sqlmock)
 		wantBody       string
 	}{
 		{
@@ -1531,26 +1531,48 @@ func Test_UpdateMetricByTypeAndName_FAULT(t *testing.T) {
 			methodT:        http.MethodPost,
 			urlT:           "http://localhost:8080/update/wrong/PollCount/1",
 			wantStatusCode: http.StatusNotFound,
+			initMockT: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO").
+					WithArgs("https://practicum.yandex.ru/", sqlmock.AnyArg()).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
 		},
 		{
 			nameT:          "wrong URL",
 			methodT:        http.MethodPost,
 			urlT:           "http://localhost:8080/update/counter//1",
 			wantStatusCode: http.StatusNotFound,
+			initMockT: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO").
+					WithArgs("https://practicum.yandex.ru/", sqlmock.AnyArg()).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
 		},
 		{
 			nameT:          "wrong method",
 			methodT:        http.MethodGet,
 			urlT:           "http://localhost:8080/update/gauge/PollCount/1",
 			wantStatusCode: http.StatusBadRequest,
+			initMockT: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO").
+					WithArgs("https://practicum.yandex.ru/", sqlmock.AnyArg()).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
 		},
 	}
 	for _, tt := range testsData {
 		t.Run(tt.nameT, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			require.NoError(t, err)
+			defer db.Close()
+
+			tt.initMockT(mock)
+
 			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
 			res := httptest.NewRecorder()
 
-			m.UpdateMetricByTypeAndName(res, req)
+			internalUpdateMetricByTypeAndName(db, conf, res, req)
+
 			resp := res.Result()
 			defer func() {
 				err := resp.Body.Close()
@@ -1563,13 +1585,25 @@ func Test_UpdateMetricByTypeAndName_FAULT(t *testing.T) {
 }
 
 func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
-	testMetrics := NewMetrics()
 
-	testMetrics.CounterMetrics["PollCount"] = 123
-
-	metricsHandler := &MetricsHandlerT{
-		Metrics: testMetrics,
+	// подготовка
+	conf := &MetricsHandlerT{
+		Metrics: &MetricsT{
+			GaugeMetrics:   make(map[string]float64),
+			CounterMetrics: make(map[string]int64),
+			Mu:             sync.RWMutex{},
+		},
+		DB: &MetricsDBT{
+			DSN: "",
+			Mu:  sync.RWMutex{},
+		},
+		StoreIntervalMetr:   "300",
+		FileStoragePathMetr: "storageMetrics.json",
+		RestoreMetr:         "false",
 	}
+
+	conf.Metrics.CounterMetrics["PollCount"] = 123
+
 	testsData := []struct {
 		nameT          string
 		methodT        string
@@ -1578,7 +1612,7 @@ func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
 		wantBody       string
 	}{
 		{
-			nameT:          "correct data",
+			nameT:          "корректные данные",
 			methodT:        http.MethodGet,
 			urlT:           "http://localhost:8080/value/counter/PollCount",
 			wantStatusCode: http.StatusOK,
@@ -1590,7 +1624,8 @@ func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
 			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
 			res := httptest.NewRecorder()
 
-			metricsHandler.ValueMetricByTypeAndName(res, req)
+			internalValueMetricByTypeAndName(conf, res, req)
+
 			resp := res.Result()
 			defer func() {
 				err := resp.Body.Close()
@@ -1607,11 +1642,22 @@ func Test_ValueMetricByTypeAndName_SUCCESS(t *testing.T) {
 }
 
 func Test_ValueMetricByTypeAndName_FAULT(t *testing.T) {
-	testMetrics := NewMetrics()
-
-	metricsHandler := &MetricsHandlerT{
-		Metrics: testMetrics,
+	// подготовка
+	conf := &MetricsHandlerT{
+		Metrics: &MetricsT{
+			GaugeMetrics:   make(map[string]float64),
+			CounterMetrics: make(map[string]int64),
+			Mu:             sync.RWMutex{},
+		},
+		DB: &MetricsDBT{
+			DSN: "",
+			Mu:  sync.RWMutex{},
+		},
+		StoreIntervalMetr:   "300",
+		FileStoragePathMetr: "storageMetrics.json",
+		RestoreMetr:         "false",
 	}
+
 	testsData := []struct {
 		nameT          string
 		methodT        string
@@ -1643,7 +1689,8 @@ func Test_ValueMetricByTypeAndName_FAULT(t *testing.T) {
 			req := httptest.NewRequest(tt.methodT, tt.urlT, nil)
 			res := httptest.NewRecorder()
 
-			metricsHandler.ValueMetricByTypeAndName(res, req)
+			internalValueMetricByTypeAndName(conf, res, req)
+
 			resp := res.Result()
 			defer func() {
 				err := resp.Body.Close()
