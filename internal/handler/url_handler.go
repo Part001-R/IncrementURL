@@ -446,93 +446,6 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-func Middleware_(h http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ow := w
-
-		// Проверка поддерживает ли сервер запрашиваемую клиентом кодировку
-		acceptEncoding := r.Header.Get("Accept-Encoding")
-		found := false
-
-		if acceptEncoding != "" {
-			encodings := strings.Split(acceptEncoding, ",")
-			for _, v := range encodings {
-				encodingType := strings.TrimSpace(v)
-
-				switch encodingType {
-				case "gzip":
-					cw := gz.NewCompressWriter(w)
-					ow = cw
-					defer func() {
-						if err := cw.Close(); err != nil {
-							logger.Log.Error("Ошибка при закрытии cw", zap.Error(err))
-						}
-					}()
-					found = true
-				default:
-				}
-			}
-
-			if !found {
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
-		}
-
-		// Проверка, как клиент закодировал переданные данные
-		contentEncoding := r.Header.Get("Content-Encoding")
-		found = false
-
-		if contentEncoding != "" {
-			encodings := strings.Split(contentEncoding, ",")
-			for _, v := range encodings {
-				encodingType := strings.TrimSpace(v)
-
-				switch encodingType {
-				case "gzip":
-					cr, err := gz.NewCompressReader(r.Body)
-					if err != nil {
-						http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-						return
-					}
-					defer func() {
-						if err := cr.Close(); err != nil {
-							logger.Log.Error("Ошибка при закрытии cr", zap.Error(err))
-						}
-					}()
-					defer func() {
-						if err := r.Body.Close(); err != nil {
-							logger.Log.Error("Ошибка при закрытии r.Body", zap.Error(err))
-						}
-					}()
-
-					r.Body = cr
-					found = true
-
-				default:
-				}
-			}
-
-			if !found {
-				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-				return
-			}
-		}
-
-		// Запуск обработчика
-		timeStart := time.Now()
-		h(ow, r)
-		duration := time.Since(timeStart)
-
-		// Вывод в лог сводной информации по запросу
-		logger.Log.Info("принят HTTP запрос",
-			zap.String("URI", r.RequestURI),
-			zap.String("метод", r.Method),
-			zap.Duration("время выполнения запроса", duration),
-		)
-	})
-}
-
 // Функция наполняет мапы новыми парами соответствий длинных и коротких ссылок. Возвращает короткую ссылку и ошибку.
 //
 // Параметры:
@@ -1057,27 +970,28 @@ func internalShortURLFromLong(db *sql.DB, sl *ShortLongT, w http.ResponseWriter,
 
 	// Проверка аргументов
 	if sl == nil {
-		fmt.Println("=== Ошибка 1") // ===
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	if db == nil && sl.DB.DSN != "" {
-		fmt.Println("=== Ошибка 2") // ===
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	if r.Header.Get("Content-Type") != "application/json" {
-		fmt.Println("=== Ошибка 3") // ===
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
+	/*
+		if r.Header.Get("Content-Type") != "application/json" {
+
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+	*/
 	if w == nil {
-		fmt.Println("=== Ошибка 4") // ===
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	if r == nil {
-		fmt.Println("=== Ошибка 5") // ===
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -1095,10 +1009,12 @@ func internalShortURLFromLong(db *sql.DB, sl *ShortLongT, w http.ResponseWriter,
 		_ = r.Body.Close()
 	}()
 	if err != nil {
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	if len(rxData) == 0 {
+
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
@@ -1114,7 +1030,6 @@ func internalShortURLFromLong(db *sql.DB, sl *ShortLongT, w http.ResponseWriter,
 		return
 	}
 	if err != nil {
-		fmt.Printf("=== Ошибка 6: <%v>\n", err) // ===
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -1204,3 +1119,26 @@ func internalShortURLFromLongJSON(db *sql.DB, sl *ShortLongT, w http.ResponseWri
 	w.WriteHeader(http.StatusCreated)
 	w.Write(txData)
 }
+
+// Вспомогательная функция для отладки работы приложения.
+//
+// Параметры:
+//
+// str - строка, для записи в файл.
+/*
+func writeInFileDebugData(str string) {
+	filename := "debug.txt"
+
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatalf("ошибка <%v> открытия файла <%s>", err, filename)
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	if _, err := file.WriteString(str + "\n"); err != nil {
+		log.Fatalf("ошибка <%v> записи в файл <%s>", err, filename)
+	}
+}
+*/
