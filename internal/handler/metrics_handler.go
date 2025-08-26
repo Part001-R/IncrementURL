@@ -696,6 +696,14 @@ func storageMetricsInMap(m []rxMetricsBatchT, gM map[string]float64, cM map[stri
 	return nil
 }
 
+// Функция содержит реализацию логики updateMetricByTypeAndName.
+//
+// Параметры:
+//
+// db - указатель на БД.
+// m - конфигурация метрик.
+// w - ResponseWriter.
+// r - Request.
 func internalUpdateMetricByTypeAndName(db *sql.DB, m *MetricsHandlerT, w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
@@ -790,6 +798,13 @@ func internalUpdateMetricByTypeAndName(db *sql.DB, m *MetricsHandlerT, w http.Re
 	w.WriteHeader(http.StatusOK)
 }
 
+// Функция содержит реализацию логики valueMetricByTypeAndName.
+//
+// Параметры:
+//
+// m - конфигурация метрик.
+// w - ResponseWriter.
+// r - Request.
 func internalValueMetricByTypeAndName(m *MetricsHandlerT, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
