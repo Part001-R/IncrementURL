@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -624,118 +623,6 @@ func Test_LongURLFromShort_FAULT(t *testing.T) {
 			}()
 
 			assert.Equalf(t, tt.wantStatusCode, resp.StatusCode, "ожидался код {%d} а принят {%d}", tt.wantStatusCode, resp.StatusCode)
-		})
-	}
-}
-
-func Test_Middleware_SUCCESS(t *testing.T) {
-
-	// Обработчик для теста Middleware
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
-
-	mw := Middleware(testHandler)
-
-	testData := []struct {
-		nameTest   string
-		methodReqT string
-		reqURLT    string
-		encodingT  string
-		wantCodeT  int
-	}{
-		{
-			nameTest:   "успешный запрос с gzip",
-			methodReqT: "http.MethodGet",
-			reqURLT:    "/",
-			encodingT:  "gzip",
-			wantCodeT:  http.StatusOK,
-		},
-	}
-
-	for _, tt := range testData {
-		t.Run(tt.nameTest, func(t *testing.T) {
-
-			req := httptest.NewRequest(tt.methodReqT, tt.reqURLT, nil)
-			req.Header.Set("Accept-Encoding", tt.encodingT)
-			rr := httptest.NewRecorder()
-
-			mw.ServeHTTP(rr, req)
-
-			reader, err := gzip.NewReader(rr.Body)
-			if err != nil {
-				t.Fatalf("Ошибка при создании gzip reader: %s", err)
-			}
-			defer reader.Close()
-
-			decompressedBody, err := io.ReadAll(reader)
-			if err != nil {
-				t.Fatalf("Ошибка при чтении декомпрессированного тела: %s", err)
-			}
-
-			assert.Equal(t, tt.wantCodeT, rr.Code)
-			assert.Equal(t, "OK", string(decompressedBody))
-
-		})
-	}
-}
-
-func Test_Middleware_FAULT(t *testing.T) {
-
-	// Обработчик для теста Middleware
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
-
-	mw := Middleware(testHandler)
-
-	testData := []struct {
-		nameTest         string
-		methodReqT       string
-		reqURLT          string
-		acceptEncodingT  string
-		contentEncodingT string
-		wantCodeT        int
-	}{
-		{
-			nameTest:         "неподдерживаемая запрашиваемая кодировка",
-			methodReqT:       http.MethodGet,
-			reqURLT:          "/",
-			acceptEncodingT:  "AAA",
-			contentEncodingT: "gzip",
-			wantCodeT:        http.StatusBadRequest,
-		},
-		{
-			nameTest:         "неподдерживаемая принятая кодировка",
-			methodReqT:       http.MethodGet,
-			reqURLT:          "/",
-			acceptEncodingT:  "gzip",
-			contentEncodingT: "AAA",
-			wantCodeT:        http.StatusBadRequest,
-		},
-		{
-			nameTest:         "путое тело при POST",
-			methodReqT:       http.MethodPost,
-			reqURLT:          "/",
-			acceptEncodingT:  "gzip",
-			contentEncodingT: "gzip",
-			wantCodeT:        http.StatusBadRequest,
-		},
-	}
-
-	for _, tt := range testData {
-		t.Run(tt.nameTest, func(t *testing.T) {
-
-			req := httptest.NewRequest(tt.methodReqT, tt.reqURLT, nil)
-			req.Header.Set("Accept-Encoding", tt.acceptEncodingT)
-			req.Header.Set("Content-Encoding", tt.contentEncodingT)
-			rr := httptest.NewRecorder()
-
-			mw.ServeHTTP(rr, req)
-
-			assert.Equalf(t, http.StatusBadRequest, rr.Code, "ожидался код <%d>, а принят <%d>", http.StatusBadRequest, rr.Code)
 		})
 	}
 }

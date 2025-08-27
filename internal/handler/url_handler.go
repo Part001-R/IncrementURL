@@ -156,7 +156,6 @@ func (sl *ShortLongT) ShortURLFromLongBatch(w http.ResponseWriter, r *http.Reque
 		_ = r.Body.Close()
 	}()
 	if err != nil {
-		fmt.Println("===== 1") //=============
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -357,18 +356,13 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w
 
-		// Проверка на пустое тело запроса для POST
-		if r.Method == http.MethodPost && r.ContentLength == 0 {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-
 		// Проверка поддерживает ли сервер запрашиваемую клиентом кодировку
 		acceptEncoding := r.Header.Get("Accept-Encoding")
 		found := false
 
 		if acceptEncoding != "" {
 			encodings := strings.Split(acceptEncoding, ",")
+
 			for _, v := range encodings {
 				encodingType := strings.TrimSpace(v)
 
@@ -381,6 +375,8 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 							logger.Log.Error("Ошибка при закрытии cw", zap.Error(err))
 						}
 					}()
+					found = true
+				case "identity":
 					found = true
 				default:
 				}
@@ -398,6 +394,7 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 
 		if contentEncoding != "" {
 			encodings := strings.Split(contentEncoding, ",")
+
 			for _, v := range encodings {
 				encodingType := strings.TrimSpace(v)
 
@@ -405,6 +402,7 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 				case "gzip":
 					cr, err := gz.NewCompressReader(r.Body)
 					if err != nil {
+
 						http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 						return
 					}
@@ -420,6 +418,8 @@ func Middleware(h http.HandlerFunc) http.HandlerFunc {
 					}()
 
 					r.Body = cr
+					found = true
+				case "identity":
 					found = true
 
 				default:
@@ -967,10 +967,8 @@ func workWithRxData(db *sql.DB, sl *ShortLongT, rxLongURL string) (string, error
 // w - http.ResponseWriter.
 // r - *http.Request.
 func internalShortURLFromLong(db *sql.DB, sl *ShortLongT, w http.ResponseWriter, r *http.Request) {
-
 	// Проверка аргументов
 	if sl == nil {
-
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -978,20 +976,11 @@ func internalShortURLFromLong(db *sql.DB, sl *ShortLongT, w http.ResponseWriter,
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	/*
-		if r.Header.Get("Content-Type") != "application/json" {
-
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-	*/
 	if w == nil {
-
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	if r == nil {
-
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
@@ -1009,12 +998,10 @@ func internalShortURLFromLong(db *sql.DB, sl *ShortLongT, w http.ResponseWriter,
 		_ = r.Body.Close()
 	}()
 	if err != nil {
-
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 	if len(rxData) == 0 {
-
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
@@ -1022,11 +1009,21 @@ func internalShortURLFromLong(db *sql.DB, sl *ShortLongT, w http.ResponseWriter,
 	rxLongURL := string(rxData)
 
 	// Формирование короткого представления и сохранение
-	errUniqueLong := `pq: duplicate key value violates unique constraint "shortener_long_key"` // ошибка по уникальности значения длинного представления
+	errUniqueLong := `pq: duplicate key value violates unique constraint "idx_shortener_long"` // ошибка по уникальности значения длинного представления
 
 	shortURL, err := workWithRxData(db, sl, rxLongURL)
 	if err != nil && errors.Unwrap(err).Error() == errUniqueLong {
-		http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
+
+		shortURL, err := readShortByLongDB(db, rxLongURL)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		// Ответ
+		strResult := "http://localhost" + sl.BaseAddrShortURL + shortURL
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(strResult))
 		return
 	}
 	if err != nil {
@@ -1096,11 +1093,32 @@ func internalShortURLFromLongJSON(db *sql.DB, sl *ShortLongT, w http.ResponseWri
 
 	// формирование короткого представления и сохранение
 
-	errUniqueLong := `pq: duplicate key value violates unique constraint "shortener_long_key"` // ошибка по уникальности значения длинного представления
+	errUniqueLong := `pq: duplicate key value violates unique constraint "idx_shortener_long"` // ошибка по уникальности значения длинного представления
 
 	shortURL, err := workWithRxData(db, sl, rxJSON.URL)
 	if err != nil && errors.Unwrap(err).Error() == errUniqueLong {
-		http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
+
+		shortURL, err := readShortByLongDB(db, rxJSON.URL)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		// Ответ
+		strResult := "http://localhost" + sl.BaseAddrShortURL + shortURL
+		var txJSON = txShortURLT{
+			Result: strResult,
+		}
+		txData, err := json.Marshal(txJSON)
+		if err != nil {
+
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		w.Write(txData)
 		return
 	}
 
@@ -1111,13 +1129,37 @@ func internalShortURLFromLongJSON(db *sql.DB, sl *ShortLongT, w http.ResponseWri
 	}
 	txData, err := json.Marshal(txJSON)
 	if err != nil {
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/jsom")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(txData)
+}
+
+// Функция с содержимым запроса к БД для получения короткого представления по исходному URL. Возвращается короткое представление и ошибка.
+//
+// Параметры:
+//
+// db - указатель на БД.
+// longURL - длинное представление URL.
+func readShortByLongDB(db *sql.DB, longURL string) (string, error) {
+
+	var shortURL string
+
+	query := `SELECT short FROM shortener WHERE long = $1`
+	err := db.QueryRow(query, longURL).Scan(&shortURL)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("URL не найден: %s", longURL)
+		}
+		return "", fmt.Errorf("ошибка при выполнении запроса: %v", err)
+	}
+
+	return shortURL, nil
 }
 
 // Вспомогательная функция для отладки работы приложения.
@@ -1125,6 +1167,7 @@ func internalShortURLFromLongJSON(db *sql.DB, sl *ShortLongT, w http.ResponseWri
 // Параметры:
 //
 // str - строка, для записи в файл.
+
 /*
 func writeInFileDebugData(str string) {
 	filename := "debug.txt"
