@@ -1,0 +1,142 @@
+Вход в internalShortURLFromLong
+теле запроса содержится: <https://practicum.yandex.ru/>
+Добавление в БД: <https://practicum.yandex.ru/>
+
+возвращается строка: <http://localhost:8080/Uq7_ZHWA>
+Вход в internalShortURLFromLong
+теле запроса содержится: <https://practicum.yandex.ru/>
+Добавление в БД: <https://practicum.yandex.ru/>
+
+возвращается строка: <http://localhost:8080/XAggzwiO>
+Вход в internalShortURLFromLong
+Ошибка 400: нет тот контекст
+Вход в internalShortURLFromLong
+Ошибка 500: пустое тело запроса
+Вход в internalShortURLFromLong
+Ошибка 500: нет указателя на db при не пусом dsn
+Вход в internalShortURLFromLong
+Ошибка 500: нет указателя на sl
+internalShortURLFromLongJSON
+Тело запроса: <https://practicum.yandex.ru>
+Возврат: <{http://localhost:8080/wUdrLqU5}>
+internalShortURLFromLongJSON
+Тело запроса: <https://practicum.yandex.ru>
+Возврат: <{http://localhost:8080/a9niI7nP}>
+internalShortURLFromLongJSON
+Ошибка 400: принят метод не пост
+internalShortURLFromLongJSON
+Ошибка 400: в принятом JSON поле URL пустое
+internalShortURLFromLongJSON
+Ошибка 500: нет указателя на БД и dsn не пустой
+internalShortURLFromLongJSON
+Ошибка 400: тип контента не json
+internalShortURLFromLongJSON
+Ошибка 500: нет указателя на конфигурацию
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+Вход в internalShortURLFromLong
+теле запроса содержится: <https://practicum.yandex.ru/>
+Добавление в БД: <https://practicum.yandex.ru/>
+
+возвращается строка: <http://localhost:8080/khk0LCWj>
+Вход в internalShortURLFromLong
+теле запроса содержится: <https://practicum.yandex.ru/>
+Добавление в БД: <https://practicum.yandex.ru/>
+
+возвращается строка: <http://localhost:8080/cJtimSdO>
+Вход в internalShortURLFromLong
+Ошибка 400: нет тот контекст
+Вход в internalShortURLFromLong
+Ошибка 500: пустое тело запроса
+Вход в internalShortURLFromLong
+Ошибка 500: нет указателя на db при не пусом dsn
+Вход в internalShortURLFromLong
+Ошибка 500: нет указателя на sl
+internalShortURLFromLongJSON
+Тело запроса: <https://practicum.yandex.ru>
+Возврат: <{http://localhost:8080/yOuQtiU2}>
+internalShortURLFromLongJSON
+Тело запроса: <https://practicum.yandex.ru>
+Возврат: <{http://localhost:8080/Q1kTHGrk}>
+internalShortURLFromLongJSON
+Ошибка 400: принят метод не пост
+internalShortURLFromLongJSON
+Ошибка 400: в принятом JSON поле URL пустое
+internalShortURLFromLongJSON
+Ошибка 500: нет указателя на БД и dsn не пустой
+internalShortURLFromLongJSON
+Ошибка 400: тип контента не json
+internalShortURLFromLongJSON
+Ошибка 500: нет указателя на конфигурацию
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
+Вход в internalShortURLFromLong
+теле запроса содержится: <https://practicum.yandex.ru/>
+Добавление в БД: <https://practicum.yandex.ru/>
+
+возвращается строка: <http://localhost:8080/51KQqmUd>
+Вход в internalShortURLFromLong
+теле запроса содержится: <https://practicum.yandex.ru/>
+Добавление в БД: <https://practicum.yandex.ru/>
+
+возвращается строка: <http://localhost:8080/TIE7HQeb>
+Вход в internalShortURLFromLong
+Ошибка 400: нет тот контекст
+Вход в internalShortURLFromLong
+Ошибка 500: пустое тело запроса
+Вход в internalShortURLFromLong
+Ошибка 500: нет указателя на db при не пусом dsn
+Вход в internalShortURLFromLong
+Ошибка 500: нет указателя на sl
+internalShortURLFromLongJSON
+Тело запроса: <https://practicum.yandex.ru>
+Возврат: <{http://localhost:8080/lGqBXNCQ}>
+internalShortURLFromLongJSON
+Тело запроса: <https://practicum.yandex.ru>
+Возврат: <{http://localhost:8080/Uz2qkHMo}>
+internalShortURLFromLongJSON
+Ошибка 400: принят метод не пост
+internalShortURLFromLongJSON
+Ошибка 400: в принятом JSON поле URL пустое
+internalShortURLFromLongJSON
+Ошибка 500: нет указателя на БД и dsn не пустой
+internalShortURLFromLongJSON
+Ошибка 400: тип контента не json
+internalShortURLFromLongJSON
+Ошибка 500: нет указателя на конфигурацию

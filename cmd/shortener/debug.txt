@@ -1,0 +1,14 @@
+middleware: вход в обработчик
+Вход в ShortURLFromLong
+Вход в internalShortURLFromLong
+теле запроса содержится: <"https://github.com/go-resty/resty">
+возвращается строка: <http://localhost:8080/7DFSswDf>
+middleware: выход из обработчика
+ 
+===========================
+ 
+middleware: вход в обработчик
+middleware: выход из обработчика
+ 
+===========================
+ 
